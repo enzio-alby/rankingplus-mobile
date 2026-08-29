@@ -1,0 +1,50 @@
+{
+  "expo": {
+    "name": "Ranking+",
+    "slug": "rankingplus-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "rankingplus",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "rankingplus.p4"
+    },
+    "android": {
+      "package": "rankingplus.p4",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "backgroundColor": "#020122",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-secure-store",
+      "expo-web-browser",
+      "expo-sqlite",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#020122",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 180,
+          "resizeMode": "contain"
+        }
+      ]
+    ],
+    "extra": {
+      "apiUrl": "http://SEU_IP_LOCAL:4000",
+      "googleWebClientId": "26234094144-8m863sa1bklhu5fg68or2pcfm9heqvji.apps.googleusercontent.com",
+      "googleAndroidClientId": "",
+      "googleIosClientId": ""
+    }
+  }
+}
