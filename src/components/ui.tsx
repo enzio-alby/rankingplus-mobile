@@ -1,0 +1,142 @@
+import React, { type ReactNode } from 'react';
+import {
+  View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl, Pressable,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors, spacing, radius, typography } from '@/theme/tokens';
+
+export function ScreenScroll({
+  children,
+  onRefresh,
+  refreshing,
+}: {
+  children: ReactNode;
+  onRefresh?: () => void;
+  refreshing?: boolean;
+}) {
+  const insets = useSafeAreaInsets();
+  return (
+    <ScrollView
+      style={{ backgroundColor: colors.bgMuted }}
+      contentContainerStyle={{
+        padding: spacing.lg,
+        paddingTop: insets.top + spacing.md,
+        paddingBottom: spacing.xxl,
+        gap: spacing.md,
+      }}
+      refreshControl={
+        onRefresh ? (
+          <RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
+        ) : undefined
+      }
+    >
+      {children}
+    </ScrollView>
+  );
+}
+
+export function Titulo({ children }: { children: ReactNode }) {
+  return <Text style={styles.titulo}>{children}</Text>;
+}
+
+export function Card({ children, style }: { children: ReactNode; style?: object }) {
+  return <View style={[styles.card, style]}>{children}</View>;
+}
+
+/** Loading / erro / vazio num componente só. */
+export function Estado({
+  carregando,
+  erro,
+  vazio,
+  vazioTexto = 'Nada por aqui ainda.',
+  onRetry,
+}: {
+  carregando?: boolean;
+  erro?: string | null;
+  vazio?: boolean;
+  vazioTexto?: string;
+  onRetry?: () => void;
+}) {
+  if (carregando) {
+    return (
+      <View style={styles.centro}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+  if (erro) {
+    return (
+      <View style={styles.centro}>
+        <Text style={styles.erroTxt}>{erro}</Text>
+        {onRetry && (
+          <Pressable style={styles.btn} onPress={onRetry}>
+            <Text style={styles.btnTxt}>Tentar de novo</Text>
+          </Pressable>
+        )}
+      </View>
+    );
+  }
+  if (vazio) {
+    return (
+      <View style={styles.centro}>
+        <Text style={styles.vazioTxt}>{vazioTexto}</Text>
+      </View>
+    );
+  }
+  return null;
+}
+
+export function StatTile({
+  valor,
+  rotulo,
+  cor,
+}: {
+  valor: string | number;
+  rotulo: string;
+  cor?: string;
+}) {
+  return (
+    <View style={styles.stat}>
+      <Text style={[styles.statVal, cor ? { color: cor } : null]}>{valor}</Text>
+      <Text style={styles.statLbl}>{rotulo}</Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  titulo: { ...typography.h2, color: colors.text, marginBottom: spacing.xs },
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+  },
+  centro: { alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.xxl, gap: spacing.md },
+  erroTxt: { ...typography.body, color: colors.danger, textAlign: 'center' },
+  vazioTxt: { ...typography.body, color: colors.textMuted, textAlign: 'center' },
+  btn: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+  },
+  btnTxt: { ...typography.body, color: '#fff', fontWeight: '600' },
+  stat: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+  },
+  statVal: { ...typography.h2, color: colors.primary },
+  statLbl: { ...typography.tiny, color: colors.textMuted, marginTop: 2, textAlign: 'center' },
+});
