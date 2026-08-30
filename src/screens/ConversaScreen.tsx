@@ -102,7 +102,13 @@ export function ConversaScreen({ route }: Props) {
 
       <View style={styles.emojiRow}>
         {EMOJIS.map((e) => (
-          <Pressable key={e} onPress={() => setTexto((t) => t + e)} hitSlop={6}>
+          <Pressable
+            key={e}
+            onPress={() => setTexto((t) => t + e)}
+            hitSlop={6}
+            accessibilityRole="button"
+            accessibilityLabel={`Adicionar emoji ${e} à mensagem`}
+          >
             <Text style={styles.emoji}>{e}</Text>
           </Pressable>
         ))}
@@ -110,7 +116,13 @@ export function ConversaScreen({ route }: Props) {
 
       <View style={styles.chips}>
         {CHIPS.map((c) => (
-          <Pressable key={c} style={styles.chip} onPress={() => setTexto(c)}>
+          <Pressable
+            key={c}
+            style={styles.chip}
+            onPress={() => setTexto(c)}
+            accessibilityRole="button"
+            accessibilityLabel={`Usar resposta rápida: ${c}`}
+          >
             <Text style={styles.chipTxt}>{c}</Text>
           </Pressable>
         ))}
@@ -129,6 +141,9 @@ export function ConversaScreen({ route }: Props) {
           style={[styles.enviar, (!texto.trim() || enviar.isPending) && { opacity: 0.5 }]}
           disabled={!texto.trim() || enviar.isPending}
           onPress={() => enviar.mutate(texto.trim())}
+          accessibilityRole="button"
+          accessibilityLabel="Enviar mensagem"
+          accessibilityState={{ disabled: !texto.trim() || enviar.isPending }}
         >
           {enviar.isPending ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.enviarTxt}>➤</Text>}
         </Pressable>

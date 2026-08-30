@@ -1,21 +1,17 @@
-import React, { type ReactNode } from 'react';
+import React, { type ReactNode, forwardRef } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl, Pressable,
 } from 'react-native';
 import { colors, spacing, radius, typography } from '@/theme/tokens';
 
-export function ScreenScroll({
-  children,
-  onRefresh,
-  refreshing,
-}: {
-  children: ReactNode;
-  onRefresh?: () => void;
-  refreshing?: boolean;
-}) {
+export const ScreenScroll = forwardRef<
+  ScrollView,
+  { children: ReactNode; onRefresh?: () => void; refreshing?: boolean }
+>(function ScreenScroll({ children, onRefresh, refreshing }, ref) {
   // As telas de aba já têm o header nativo (com o sino), então aqui só um respiro.
   return (
     <ScrollView
+      ref={ref}
       style={{ backgroundColor: colors.bgMuted }}
       contentContainerStyle={{
         paddingHorizontal: spacing.md,
@@ -32,7 +28,7 @@ export function ScreenScroll({
       {children}
     </ScrollView>
   );
-}
+});
 
 export function Titulo({ children }: { children: ReactNode }) {
   return <Text style={styles.titulo}>{children}</Text>;

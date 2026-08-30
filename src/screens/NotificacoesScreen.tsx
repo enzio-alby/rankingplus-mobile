@@ -73,7 +73,12 @@ export function NotificacoesScreen() {
   return (
     <ScreenScroll onRefresh={q.refetch} refreshing={q.isRefetching}>
       {temNaoLida && (
-        <Pressable style={styles.top} onPress={() => lerTodas.mutate()}>
+        <Pressable
+          style={styles.top}
+          onPress={() => lerTodas.mutate()}
+          accessibilityRole="button"
+          accessibilityLabel="Marcar todas as notificações como lidas"
+        >
           <Text style={styles.marcar}>Marcar todas como lidas</Text>
         </Pressable>
       )}
@@ -90,7 +95,14 @@ export function NotificacoesScreen() {
         const lida = !!Number(n.lida);
         const abreConversa = TIPO_CONVERSA.includes(n.tipo) && !!n.referencia_id;
         return (
-          <Pressable key={n.id} onPress={() => abrir(n)}>
+          <Pressable
+            key={n.id}
+            onPress={() => abrir(n)}
+            accessibilityRole="button"
+            accessibilityLabel={`${lida ? 'Notificação' : 'Notificação não lida'}: ${n.titulo}. ${n.mensagem}${
+              abreConversa ? '. Toque para abrir a conversa' : ''
+            }`}
+          >
             <Card style={lida ? undefined : styles.naoLida}>
               <View style={styles.linha}>
                 <View style={[styles.icon, !lida && { backgroundColor: colors.accent + '22' }]}>

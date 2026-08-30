@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useSession } from '@/auth/session';
 import { getRanking, getFiltros } from '@/api/aluno';
@@ -18,6 +18,7 @@ export function RankingScreen() {
   const [semestre, setSemestre] = useState<string | null>(null);
   const [disc, setDisc] = useState<string | null>(null);
   const [pagina, setPagina] = useState(1);
+  const scrollRef = useRef<ScrollView>(null);
 
   const filtros = useQuery({ queryKey: ['filtros'], queryFn: getFiltros });
   const q = useQuery({
@@ -30,13 +31,17 @@ export function RankingScreen() {
     fn();
     setPagina(1);
   }
+  function recolher() {
+    setPagina(1);
+    scrollRef.current?.scrollTo({ y: 0, animated: true });
+  }
 
   const total = q.data?.length ?? 0;
   const visiveis = Math.min(pagina * PAGINA, total);
   const restantes = total - visiveis;
 
   return (
-    <ScreenScroll onRefresh={q.refetch} refreshing={q.isRefetching}>
+    <ScreenScroll ref={scrollRef} onRefresh={q.refetch} refreshing={q.isRefetching}>
       <Titulo>Ranking</Titulo>
 
       <FiltroBar>
@@ -70,6 +75,8 @@ export function RankingScreen() {
         {temFiltro && (
           <Pressable
             style={styles.limpar}
+            accessibilityRole="button"
+            accessibilityLabel="Limpar filtros do ranking"
             onPress={() =>
               trocarFiltro(() => {
                 setCurso(null);
@@ -121,7 +128,12 @@ export function RankingScreen() {
           </Text>
           <View style={styles.pagBtns}>
             {restantes > 0 && (
-              <Pressable style={styles.pagBtn} onPress={() => setPagina((p) => p + 1)}>
+              <Pressable
+                style={styles.pagBtn}
+                accessibilityRole="button"
+                accessibilityLabel={`Mostrar mais ${restantes > PAGINA ? PAGINA : restantes} colocados do ranking`}
+                onPress={() => setPagina((p) => p + 1)}
+              >
                 <Text style={styles.pagBtnTxt}>
                   Mostrar mais {restantes > PAGINA ? PAGINA : restantes}
                 </Text>
@@ -130,7 +142,9 @@ export function RankingScreen() {
             {pagina > 1 && (
               <Pressable
                 style={[styles.pagBtn, styles.pagBtnAlt]}
-                onPress={() => setPagina(1)}
+                accessibilityRole="button"
+                accessibilityLabel="Recolher a lista e voltar ao topo"
+                onPress={recolher}
               >
                 <Text style={[styles.pagBtnTxt, styles.pagBtnTxtAlt]}>Recolher</Text>
               </Pressable>

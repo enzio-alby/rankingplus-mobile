@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, TextInput, Pressable, Switch, ScrollView,
-  ActivityIndicator, Alert,
+  RefreshControl, ActivityIndicator, Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -88,14 +88,30 @@ export function MeuPerfilScreen() {
         )}
       </LinearGradient>
 
-      <ScrollView contentContainerStyle={styles.body}>
+      <ScrollView
+        contentContainerStyle={styles.body}
+        refreshControl={
+          <RefreshControl
+            refreshing={q.isRefetching || dash.isRefetching}
+            onRefresh={() => {
+              q.refetch();
+              dash.refetch();
+            }}
+            tintColor={colors.primary}
+          />
+        }
+      >
         <Estado carregando={q.isLoading} erro={q.isError ? 'Erro ao carregar perfil.' : null} onRetry={q.refetch} />
 
         {q.data && (
           <>
             <View style={styles.cardHead}>
               <Text style={styles.cardTit}>Dados</Text>
-              <Pressable onPress={() => setEditando((v) => !v)}>
+              <Pressable
+                onPress={() => setEditando((v) => !v)}
+                accessibilityRole="button"
+                accessibilityLabel={editando ? 'Cancelar edição do perfil' : 'Editar perfil'}
+              >
                 <Text style={styles.editar}>{editando ? 'Cancelar' : 'Editar'}</Text>
               </Pressable>
             </View>
@@ -121,6 +137,9 @@ export function MeuPerfilScreen() {
                   style={[styles.salvar, m.isPending && { opacity: 0.6 }]}
                   disabled={m.isPending}
                   onPress={() => m.mutate()}
+                  accessibilityRole="button"
+                  accessibilityLabel="Salvar perfil"
+                  accessibilityState={{ disabled: m.isPending, busy: m.isPending }}
                 >
                   {m.isPending ? <ActivityIndicator color="#fff" /> : <Text style={styles.salvarTxt}>Salvar</Text>}
                 </Pressable>
@@ -138,11 +157,21 @@ export function MeuPerfilScreen() {
               </View>
             )}
 
-            <Pressable style={styles.linkRow} onPress={() => nav.navigate('Termos', { origem: 'app' })}>
+            <Pressable
+              style={styles.linkRow}
+              onPress={() => nav.navigate('Termos', { origem: 'app' })}
+              accessibilityRole="link"
+              accessibilityLabel="Abrir termos e privacidade"
+            >
               <Ionicons name="document-text-outline" size={18} color={colors.textMuted} />
               <Text style={styles.linkTxt}>Termos e privacidade</Text>
             </Pressable>
-            <Pressable style={styles.linkRow} onPress={() => void sair()}>
+            <Pressable
+              style={styles.linkRow}
+              onPress={() => void sair()}
+              accessibilityRole="button"
+              accessibilityLabel="Sair da conta"
+            >
               <Ionicons name="log-out-outline" size={18} color={colors.danger} />
               <Text style={[styles.linkTxt, { color: colors.danger }]}>Sair</Text>
             </Pressable>
