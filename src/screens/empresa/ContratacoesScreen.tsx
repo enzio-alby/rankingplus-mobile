@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, Modal, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Modal, ScrollView, Linking, Alert } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
@@ -15,6 +15,7 @@ function data(s: string | null) {
 export function ContratacoesScreen() {
   const { sessao } = useSession();
   const id = sessao?.id ?? 0;
+  const ehDemo = !!sessao?.demo;
   const q = useQuery({ queryKey: ['contratacoes', id], queryFn: () => getContratacoes(id) });
   const [sel, setSel] = useState<{ alunoId: number; nome: string } | null>(null);
 
@@ -68,6 +69,7 @@ export function ContratacoesScreen() {
         empresaId={id}
         alunoId={sel?.alunoId ?? null}
         nome={sel?.nome ?? ''}
+        ehDemo={ehDemo}
         onClose={() => setSel(null)}
       />
     </>
@@ -78,11 +80,13 @@ function ContratadoModal({
   empresaId,
   alunoId,
   nome,
+  ehDemo,
   onClose,
 }: {
   empresaId: number;
   alunoId: number | null;
   nome: string;
+  ehDemo: boolean;
   onClose: () => void;
 }) {
   const insets = useSafeAreaInsets();
@@ -119,14 +123,40 @@ function ContratadoModal({
 
             <Text style={styles.secao}>Contato</Text>
             <Card>
-              <Contato icon="mail-outline" label="E-mail" presente={!!d.email} />
-              <Contato icon="call-outline" label="Telefone" presente={!!d.telefone} />
-              <Contato icon="logo-linkedin" label="LinkedIn" presente={!!d.linkedin} />
-              <Contato icon="logo-github" label="GitHub" presente={!!d.github} />
-              <Text style={styles.lgpd}>
-                Os dados de contato ficam ocultos aqui por privacidade (LGPD). O contato real
-                acontece pelo chat da plataforma.
-              </Text>
+              <Contato
+                icon="mail-outline"
+                label="E-mail"
+                valor={d.email}
+                href={d.email ? `mailto:${d.email}` : null}
+                ehDemo={ehDemo}
+              />
+              <Contato
+                icon="call-outline"
+                label="Telefone"
+                valor={d.telefone}
+                href={d.telefone ? `tel:${d.telefone.replace(/[^\d+]/g, '')}` : null}
+                ehDemo={ehDemo}
+              />
+              <Contato
+                icon="logo-linkedin"
+                label="LinkedIn"
+                valor={d.linkedin}
+                href={d.linkedin ? normalizarUrl(d.linkedin) : null}
+                ehDemo={ehDemo}
+              />
+              <Contato
+                icon="logo-github"
+                label="GitHub"
+                valor={d.github}
+                href={d.github ? normalizarUrl(d.github) : null}
+                ehDemo={ehDemo}
+              />
+              {ehDemo && (
+                <Text style={styles.lgpd}>
+                  Modo demonstração: os contatos aparecem, mas não abrem. Com conta real, cada um
+                  leva ao e-mail / discador / navegador.
+                </Text>
+              )}
             </Card>
 
             <Text style={styles.secao}>Vaga do processo</Text>
@@ -151,34 +181,56 @@ function ContratadoModal({
   );
 }
 
-/** Mostra apenas SE o contato existe, nunca o valor real (LGPD). */
+function normalizarUrl(v: string) {
+  return /^https?:\/\//i.test(v) ? v : `https://${v}`;
+}
+
+/** Mostra o valor do contato. Logado de verdade abre no app certo; na demo
+ *  aparece mas não é clicável. */
 function Contato({
   icon,
   label,
-  presente,
+  valor,
+  href,
+  ehDemo,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
-  presente: boolean;
+  valor: string | null;
+  href: string | null;
+  ehDemo: boolean;
 }) {
-  return (
-    <View
-      style={styles.contato}
-      accessibilityLabel={`${label}: ${presente ? 'informado, oculto por privacidade' : 'não informado'}`}
-    >
+  const clicavel = !!href && !ehDemo;
+  const abrir = () => {
+    if (href) Linking.openURL(href).catch(() => Alert.alert(label, valor ?? '—'));
+  };
+
+  const conteudo = (
+    <>
       <Ionicons name={icon} size={16} color={colors.textMuted} style={{ width: 22 }} />
       <Text style={styles.contatoLabel}>{label}</Text>
-      <View style={styles.contatoStatus}>
-        <Ionicons
-          name={presente ? 'lock-closed' : 'remove'}
-          size={13}
-          color={presente ? colors.textMuted : colors.border}
-        />
-        <Text style={[styles.contatoValor, !presente && { color: colors.textMuted }]}>
-          {presente ? 'Informado' : 'Não informado'}
-        </Text>
+      <Text style={[styles.contatoValor, clicavel && styles.link]} numberOfLines={1}>
+        {valor || '—'}
+      </Text>
+    </>
+  );
+
+  if (!clicavel) {
+    return (
+      <View style={styles.contato} accessibilityLabel={`${label}: ${valor ?? 'não informado'}`}>
+        {conteudo}
       </View>
-    </View>
+    );
+  }
+  return (
+    <Pressable
+      style={styles.contato}
+      onPress={abrir}
+      accessibilityRole="link"
+      accessibilityLabel={`${label}: ${valor}`}
+    >
+      {conteudo}
+    </Pressable>
   );
 }
 
@@ -206,8 +258,8 @@ const styles = StyleSheet.create({
   },
   contato: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm },
   contatoLabel: { ...typography.small, color: colors.textMuted, width: 78 },
-  contatoStatus: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4 },
-  contatoValor: { ...typography.small, color: colors.text },
+  contatoValor: { ...typography.small, color: colors.text, flex: 1, textAlign: 'right' },
+  link: { color: colors.primary, textDecorationLine: 'underline' },
   lgpd: {
     ...typography.tiny, color: colors.textMuted, marginTop: spacing.sm,
     borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.sm, lineHeight: 15,
