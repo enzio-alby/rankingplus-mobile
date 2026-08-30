@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Pressable, Modal, ScrollView, Alert } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -61,9 +61,18 @@ export function TalentosScreen({ readonly = false }: { readonly?: boolean }) {
   const [sel, setSel] = useState<number | null>(null);
   const temFiltro = !!(curso || sem || hab || cra);
 
+  const PAGINA = 15;
+  const [pagina, setPagina] = useState(1);
+  const scrollRef = useRef<ScrollView>(null);
+  useEffect(() => setPagina(1), [curso, sem, hab, cra]);
+
+  const total = q.data?.length ?? 0;
+  const visiveis = Math.min(pagina * PAGINA, total);
+  const restantes = total - visiveis;
+
   return (
     <>
-      <ScreenScroll onRefresh={q.refetch} refreshing={q.isRefetching}>
+      <ScreenScroll ref={scrollRef} onRefresh={q.refetch} refreshing={q.isRefetching}>
         <Titulo>Portal de Talentos</Titulo>
         <Text style={styles.sub}>
           {ehEmpresa
@@ -112,7 +121,7 @@ export function TalentosScreen({ readonly = false }: { readonly?: boolean }) {
           vazio={q.data?.length === 0}
           onRetry={q.refetch}
         />
-        {q.data?.map((t) => {
+        {q.data?.slice(0, visiveis).map((t) => {
           const st = favMap.get(t.id);
           return (
           <Pressable key={t.id} onPress={() => setSel(t.id)}>
@@ -153,6 +162,37 @@ export function TalentosScreen({ readonly = false }: { readonly?: boolean }) {
           </Pressable>
           );
         })}
+
+        {total > PAGINA && (
+          <View style={styles.paginacao}>
+            <Text style={styles.contador}>{visiveis} de {total}</Text>
+            <View style={styles.pagBtns}>
+              {restantes > 0 && (
+                <Pressable
+                  style={styles.pagBtn}
+                  onPress={() => setPagina((p) => p + 1)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Mostrar mais ${restantes > PAGINA ? PAGINA : restantes} candidatos`}
+                >
+                  <Text style={styles.pagBtnTxt}>Mostrar mais {restantes > PAGINA ? PAGINA : restantes}</Text>
+                </Pressable>
+              )}
+              {pagina > 1 && (
+                <Pressable
+                  style={[styles.pagBtn, styles.pagBtnAlt]}
+                  onPress={() => {
+                    setPagina(1);
+                    scrollRef.current?.scrollTo({ y: 0, animated: true });
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Recolher a lista e voltar ao topo"
+                >
+                  <Text style={[styles.pagBtnTxt, styles.pagBtnTxtAlt]}>Recolher</Text>
+                </Pressable>
+              )}
+            </View>
+          </View>
+        )}
       </ScreenScroll>
 
       <CandidatoModal
@@ -337,6 +377,13 @@ const styles = StyleSheet.create({
   sairTxt: { ...typography.small, color: colors.danger, fontWeight: '600' },
   limpar: { borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 7, justifyContent: 'center' },
   limparTxt: { ...typography.small, color: colors.danger, fontWeight: '600' },
+  paginacao: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.md },
+  contador: { ...typography.tiny, color: colors.textMuted },
+  pagBtns: { flexDirection: 'row', gap: spacing.sm },
+  pagBtn: { backgroundColor: colors.primary, borderRadius: radius.pill, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
+  pagBtnAlt: { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.border },
+  pagBtnTxt: { ...typography.small, color: '#fff', fontWeight: '700' },
+  pagBtnTxtAlt: { color: colors.textMuted },
   sub: { ...typography.small, color: colors.textMuted, marginTop: 2 },
   favRow: { flexDirection: 'row' },
   favBtn: {
