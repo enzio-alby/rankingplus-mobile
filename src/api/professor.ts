@@ -33,6 +33,27 @@ export function getStatsDisciplinas(profId: number) {
   );
 }
 
+/** Evolução da média da turma por semestre — gráfico dentro de Turmas / Relatórios. */
+export function getEvolucaoTurma(discId: number) {
+  return comFallback<local.SerieDesempenho>(
+    async () => {
+      const r = await apiFetch<{ labels?: string[]; values?: number[] }>(
+        `/disciplinas/${discId}/evolucao`,
+      );
+      return { labels: r.labels ?? [], values: (r.values ?? []).map(Number) };
+    },
+    () => local.evolucaoTurma(discId),
+  );
+}
+
+/** Envia um aviso pra turma (vira notificação 'aviso_turma' pros alunos). */
+export function enviarAvisoTurma(discId: number, mensagem: string) {
+  return comFallback<{ mensagem: string }>(
+    () => apiFetch(`/disciplinas/${discId}/aviso`, { method: 'POST', body: { mensagem } }),
+    () => local.enviarAvisoTurmaLocal(discId, mensagem),
+  );
+}
+
 export function getPerfilProfessor(id: number) {
   return comFallback<local.PerfilProfessor | null>(
     async () => {

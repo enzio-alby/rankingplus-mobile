@@ -31,6 +31,7 @@ export type RootStackParamList = {
   };
   Notificacoes: undefined;
   Relatorios: undefined;
+  ProfRelatorios: undefined;
   Talentos: undefined;
   PerfilAts: undefined;
   PerfilComportamental: undefined;

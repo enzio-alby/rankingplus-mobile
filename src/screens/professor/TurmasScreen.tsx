@@ -1,10 +1,17 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
+import { View, Text, StyleSheet, Pressable, TextInput, ActivityIndicator, Alert } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import { useSession } from '@/auth/session';
-import { getDisciplinasProfessor, getAlunosDaDisciplina } from '@/api/professor';
+import {
+  getDisciplinasProfessor,
+  getAlunosDaDisciplina,
+  getEvolucaoTurma,
+  enviarAvisoTurma,
+} from '@/api/professor';
 import { ScreenScroll, Titulo, Card, Estado } from '@/components/ui';
+import { LinhaChart } from '@/components/chart';
 import { colors, spacing, radius, typography } from '@/theme/tokens';
 
 const COR_MENCAO: Record<string, string> = {
@@ -40,10 +47,92 @@ export function ProfTurmasScreen() {
             </View>
             <Text style={styles.chev}>{aberta === d.id ? '▲' : '▼'}</Text>
           </Pressable>
-          {aberta === d.id && <ListaAlunos profId={id} discId={d.id} />}
+          {aberta === d.id && (
+            <>
+              <PainelTurma discId={d.id} nome={d.nome_materia} />
+              <ListaAlunos profId={id} discId={d.id} />
+            </>
+          )}
         </Card>
       ))}
     </ScreenScroll>
+  );
+}
+
+function PainelTurma({ discId, nome }: { discId: number; nome: string }) {
+  const [avisoAberto, setAvisoAberto] = useState(false);
+  const [texto, setTexto] = useState('');
+
+  const evo = useQuery({
+    queryKey: ['turma-evolucao', discId],
+    queryFn: () => getEvolucaoTurma(discId),
+  });
+
+  const aviso = useMutation({
+    mutationFn: () => enviarAvisoTurma(discId, texto.trim()),
+    onSuccess: (r) => {
+      setTexto('');
+      setAvisoAberto(false);
+      Alert.alert('Aviso enviado', r?.mensagem ?? 'Os alunos da turma foram notificados.');
+    },
+    onError: (e) => Alert.alert('Erro', e instanceof Error ? e.message : 'Não foi possível enviar o aviso.'),
+  });
+
+  return (
+    <View style={styles.painel}>
+      {evo.data && evo.data.values.length > 1 ? (
+        <LinhaChart
+          titulo="Média da turma por semestre"
+          labels={evo.data.labels}
+          values={evo.data.values}
+        />
+      ) : (
+        <Text style={styles.painelVazio}>
+          {evo.isLoading ? 'Carregando desempenho…' : 'Sem histórico de médias para esta turma ainda.'}
+        </Text>
+      )}
+
+      {avisoAberto ? (
+        <View style={styles.avisoBox}>
+          <TextInput
+            style={styles.avisoInput}
+            value={texto}
+            onChangeText={setTexto}
+            placeholder={`Aviso para ${nome}…`}
+            placeholderTextColor={colors.textMuted}
+            multiline
+          />
+          <View style={styles.avisoBtns}>
+            <Pressable onPress={() => setAvisoAberto(false)} style={styles.avisoBtn}>
+              <Text style={styles.avisoBtnTxt}>Cancelar</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.avisoBtn, styles.avisoBtnPrim, (!texto.trim() || aviso.isPending) && { opacity: 0.5 }]}
+              disabled={!texto.trim() || aviso.isPending}
+              onPress={() => aviso.mutate()}
+              accessibilityRole="button"
+              accessibilityLabel="Enviar aviso à turma"
+            >
+              {aviso.isPending ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={[styles.avisoBtnTxt, { color: '#fff' }]}>Enviar</Text>
+              )}
+            </Pressable>
+          </View>
+        </View>
+      ) : (
+        <Pressable
+          style={styles.avisoAbrir}
+          onPress={() => setAvisoAberto(true)}
+          accessibilityRole="button"
+          accessibilityLabel="Escrever aviso para a turma"
+        >
+          <Ionicons name="megaphone-outline" size={16} color={colors.primary} />
+          <Text style={styles.avisoAbrirTxt}>Enviar aviso à turma</Text>
+        </Pressable>
+      )}
+    </View>
   );
 }
 
@@ -108,4 +197,24 @@ const styles = StyleSheet.create({
   badgeTxt: { ...typography.small, fontWeight: '800' },
   semNota: { color: colors.textMuted, width: 30, textAlign: 'center' },
   editar: { color: colors.textMuted, fontSize: 14, marginLeft: 4 },
+  painel: {
+    marginTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border,
+    paddingTop: spacing.sm, gap: spacing.sm,
+  },
+  painelVazio: { ...typography.small, color: colors.textMuted, textAlign: 'center', paddingVertical: spacing.sm },
+  avisoAbrir: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingVertical: spacing.sm,
+  },
+  avisoAbrirTxt: { ...typography.small, color: colors.primary, fontWeight: '700' },
+  avisoBox: { gap: spacing.sm },
+  avisoInput: {
+    borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm, fontSize: 14, color: colors.text,
+    minHeight: 64, textAlignVertical: 'top',
+  },
+  avisoBtns: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm },
+  avisoBtn: { paddingVertical: spacing.sm, paddingHorizontal: spacing.lg, borderRadius: radius.md },
+  avisoBtnPrim: { backgroundColor: colors.primary },
+  avisoBtnTxt: { ...typography.small, color: colors.textMuted, fontWeight: '700' },
 });

@@ -112,6 +112,10 @@ export function ProfDashboardScreen() {
         </>
       )}
 
+      <Pressable style={styles.link} onPress={() => nav.navigate('ProfRelatorios')}>
+        <Text style={styles.linkTxt}>Ver relatórios (aulas, horários e desempenho) →</Text>
+      </Pressable>
+
       <Titulo>Minhas turmas</Titulo>
       <Estado
         carregando={discs.isLoading}
@@ -148,6 +152,8 @@ const styles = StyleSheet.create({
   sair: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
   sairTxt: { ...typography.small, color: colors.danger, fontWeight: '600' },
   grid: { flexDirection: 'row', gap: spacing.md },
+  link: { paddingVertical: spacing.md },
+  linkTxt: { ...typography.body, color: colors.primary, fontWeight: '600' },
   linha: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   materia: { ...typography.h3, color: colors.text },
   sub: { ...typography.small, color: colors.textMuted, marginTop: 2 },

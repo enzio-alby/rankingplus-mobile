@@ -14,6 +14,7 @@ import { ConversaScreen } from '@/screens/ConversaScreen';
 import { NovaConversaScreen } from '@/screens/NovaConversaScreen';
 import { NotificacoesScreen } from '@/screens/NotificacoesScreen';
 import { RelatoriosScreen } from '@/screens/aluno/RelatoriosScreen';
+import { ProfRelatoriosScreen } from '@/screens/professor/RelatoriosScreen';
 import { PerfilAtsScreen } from '@/screens/aluno/PerfilAtsScreen';
 import { PerfilComportamentalScreen } from '@/screens/aluno/PerfilComportamentalScreen';
 import { RelatorioPreviewScreen } from '@/screens/RelatorioPreviewScreen';
@@ -78,6 +79,11 @@ export function RootNavigator() {
             <Stack.Screen
               name="Relatorios"
               component={RelatoriosScreen}
+              options={{ headerShown: true, title: 'Relatórios' }}
+            />
+            <Stack.Screen
+              name="ProfRelatorios"
+              component={ProfRelatoriosScreen}
               options={{ headerShown: true, title: 'Relatórios' }}
             />
             <Stack.Screen

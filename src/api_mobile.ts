@@ -265,6 +265,50 @@ export type DisciplinaProfessor = {
   total_alunos: number;
 };
 
+/** Evolução da média da turma por semestre (mesma ideia do desempenho do aluno). */
+export async function evolucaoTurma(discId: number): Promise<SerieDesempenho> {
+  const rows = await all<{ sem: string; media: number }>(
+    `SELECT semestre_cursado AS sem, ROUND(AVG(${NOTA('mencao')}), 1) AS media
+       FROM boletim
+      WHERE disciplina_id = ? AND semestre_cursado IS NOT NULL
+      GROUP BY semestre_cursado
+      ORDER BY semestre_cursado ASC`,
+    [discId],
+  );
+  return {
+    labels: rows.map((r) => String(r.sem).slice(2)),
+    values: rows.map((r) => Number(r.media)),
+  };
+}
+
+/** Cria as notificações de aviso pros alunos da turma (modo demo). */
+export async function enviarAvisoTurmaLocal(
+  discId: number,
+  mensagem: string,
+): Promise<{ mensagem: string }> {
+  const disc = await first<{ nome_materia: string }>(
+    'SELECT nome_materia FROM disciplinas WHERE id = ?',
+    [discId],
+  );
+  if (!disc) throw new Error('Disciplina não encontrada.');
+  const alunos = await all<{ aluno_id: number }>(
+    `SELECT DISTINCT aluno_id FROM boletim
+      WHERE disciplina_id = ?
+        AND semestre_cursado = (SELECT MAX(semestre_cursado) FROM boletim WHERE disciplina_id = ?)`,
+    [discId, discId],
+  );
+  const agora = new Date().toISOString();
+  for (const a of alunos) {
+    await run(
+      `INSERT INTO notificacoes
+         (destinatario_tipo, destinatario_id, tipo, titulo, mensagem, referencia_id, lida, criado_em)
+       VALUES ('aluno', ?, 'aviso_turma', ?, ?, ?, 0, ?)`,
+      [a.aluno_id, `Aviso — ${disc.nome_materia}`, mensagem.trim(), discId, agora],
+    );
+  }
+  return { mensagem: `Aviso enviado para ${alunos.length} aluno(s).` };
+}
+
 export function disciplinasProfessor(profId: number) {
   return all<DisciplinaProfessor>(
     `SELECT d.id, d.nome_materia, d.sala, d.dia_semana, d.horario,
