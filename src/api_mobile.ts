@@ -59,6 +59,24 @@ export async function desempenhoSemestral(alunoId: number): Promise<SerieDesempe
   };
 }
 
+// ─── ALUNO — FREQUÊNCIA POR DISCIPLINA (gráfico) ──────────────────────────
+export type FreqDisciplina = { disciplina: string; frequencia: number };
+
+export async function frequenciaPorDisciplina(alunoId: number): Promise<FreqDisciplina[]> {
+  const rows = await all<{ disciplina: string; faltas: number }>(
+    `SELECT d.nome_materia AS disciplina, SUM(CAST(b.faltas AS REAL)) AS faltas
+       FROM boletim b JOIN disciplinas d ON b.disciplina_id = d.id
+      WHERE b.aluno_id = ?
+      GROUP BY d.id
+      ORDER BY d.nome_materia`,
+    [alunoId],
+  );
+  return rows.map((r) => ({
+    disciplina: r.disciplina,
+    frequencia: Math.max(0, 100 - Number(r.faltas ?? 0) * 2),
+  }));
+}
+
 // ─── RANKING ────────────────────────────────────────────────────────────────
 export type AlunoRanking = {
   id: number;

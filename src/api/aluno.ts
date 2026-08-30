@@ -75,7 +75,7 @@ export function salvarMeuPerfil(alunoId: number, campos: local.CamposPerfilAluno
   );
 }
 
-// ─── Desempenho por semestre (gráfico) ─────────────────────────────────────
+// ─── Gráficos ──────────────────────────────────────────────────────────────
 export function getDesempenho(alunoId: number) {
   return comFallback<local.SerieDesempenho>(
     async () => {
@@ -85,6 +85,27 @@ export function getDesempenho(alunoId: number) {
       return { labels: r.labels ?? [], values: (r.values ?? []).map(Number) };
     },
     () => local.desempenhoSemestral(alunoId),
+  );
+}
+
+export function getFrequenciaDisciplinas(alunoId: number) {
+  return comFallback<local.FreqDisciplina[]>(
+    async () => {
+      // web: /alunos/:id/boletim-detalhado tem faltas por disciplina
+      const r = await apiFetch<
+        { nome_materia?: string; faltas?: number }[]
+      >(`/alunos/${alunoId}/boletim-detalhado`);
+      const map = new Map<string, number>();
+      for (const d of r) {
+        const k = d.nome_materia ?? '—';
+        map.set(k, (map.get(k) ?? 0) + Number(d.faltas ?? 0));
+      }
+      return [...map].map(([disciplina, faltas]) => ({
+        disciplina,
+        frequencia: Math.max(0, 100 - faltas * 2),
+      }));
+    },
+    () => local.frequenciaPorDisciplina(alunoId),
   );
 }
 

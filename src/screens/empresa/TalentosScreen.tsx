@@ -34,9 +34,11 @@ const CRA_OPCOES = [
   { label: 'CRA ≥ 9', value: '9' },
 ];
 
-export function TalentosScreen() {
-  const { sessao, sair } = useSession();
+/** Portal de Talentos. `readonly` = visão de aluno/professor (sem favoritar). */
+export function TalentosScreen({ readonly = false }: { readonly?: boolean }) {
+  const { sessao } = useSession();
   const empId = sessao?.id ?? 0;
+  const ehEmpresa = sessao?.tipo === 'empresa' && !readonly;
 
   const [curso, setCurso] = useState<string | null>(null);
   const [sem, setSem] = useState<string | null>(null);
@@ -45,10 +47,15 @@ export function TalentosScreen() {
 
   const filtros = useQuery({ queryKey: ['filtros'], queryFn: getFiltros });
   const q = useQuery({
-    queryKey: ['talentos', empId, curso, sem, hab, cra],
-    queryFn: () => getTalentos(empId, { curso, semestreMin: sem, habilidade: hab, craMin: cra }),
+    queryKey: ['talentos', empId, curso, sem, hab, cra, ehEmpresa],
+    queryFn: () =>
+      getTalentos(ehEmpresa ? empId : 0, { curso, semestreMin: sem, habilidade: hab, craMin: cra }),
   });
-  const favs = useQuery({ queryKey: ['favoritos', empId], queryFn: () => getFavoritos(empId) });
+  const favs = useQuery({
+    queryKey: ['favoritos', empId],
+    queryFn: () => getFavoritos(empId),
+    enabled: ehEmpresa,
+  });
   const favMap = new Map((favs.data ?? []).map((f) => [f.id, f.status]));
   const [sel, setSel] = useState<number | null>(null);
   const temFiltro = !!(curso || sem || hab || cra);
@@ -56,18 +63,12 @@ export function TalentosScreen() {
   return (
     <>
       <ScreenScroll onRefresh={q.refetch} refreshing={q.isRefetching}>
-        <View style={styles.top}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.emp}>{sessao?.nome}</Text>
-            {sessao?.demo && <Text style={styles.demo}>modo demonstração</Text>}
-          </View>
-          <Pressable onPress={() => void sair()} style={styles.sairBtn}>
-            <Text style={styles.sairTxt}>Sair</Text>
-          </Pressable>
-        </View>
-
         <Titulo>Portal de Talentos</Titulo>
-        <Text style={styles.sub}>Candidatos com desempenho acadêmico verificado.</Text>
+        <Text style={styles.sub}>
+          {ehEmpresa
+            ? 'Candidatos com desempenho acadêmico verificado.'
+            : 'Veja como seu perfil (e o dos colegas) aparece para as empresas.'}
+        </Text>
 
         <FiltroBar>
           <SelectPill
@@ -153,7 +154,12 @@ export function TalentosScreen() {
         })}
       </ScreenScroll>
 
-      <CandidatoModal alunoId={sel} empresaId={empId} onClose={() => setSel(null)} />
+      <CandidatoModal
+        alunoId={sel}
+        empresaId={empId}
+        ehEmpresa={ehEmpresa}
+        onClose={() => setSel(null)}
+      />
     </>
   );
 }
@@ -161,17 +167,19 @@ export function TalentosScreen() {
 function CandidatoModal({
   alunoId,
   empresaId,
+  ehEmpresa,
   onClose,
 }: {
   alunoId: number | null;
   empresaId: number;
+  ehEmpresa: boolean;
   onClose: () => void;
 }) {
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
   const q = useQuery({
-    queryKey: ['candidato', alunoId, empresaId],
-    queryFn: () => getPerfilCandidato(alunoId as number, empresaId),
+    queryKey: ['candidato', alunoId, empresaId, ehEmpresa],
+    queryFn: () => getPerfilCandidato(alunoId as number, ehEmpresa ? empresaId : 0),
     enabled: alunoId != null,
   });
   const desemp = useQuery({
@@ -182,7 +190,7 @@ function CandidatoModal({
   const favStatus = useQuery({
     queryKey: ['status-fav', empresaId, alunoId],
     queryFn: () => getStatusFavorito(empresaId, alunoId as number),
-    enabled: alunoId != null,
+    enabled: alunoId != null && ehEmpresa,
   });
   const d = q.data;
 
@@ -218,31 +226,35 @@ function CandidatoModal({
               {[d.curso, d.semestre ? `${d.semestre}º sem.` : null].filter(Boolean).join(' · ')}
             </Text>
 
-            <View style={styles.favRow}>
-              <Pressable
-                style={[styles.favBtn, favStatus.data && styles.favBtnOn]}
-                onPress={() => favBtn.mutate()}
-                disabled={favBtn.isPending}
-              >
-                <Text style={[styles.favBtnTxt, favStatus.data && styles.favBtnTxtOn]}>
-                  {favStatus.data ? '★ Favoritado' : '☆ Favoritar'}
-                </Text>
-              </Pressable>
-            </View>
-            {favStatus.data && (
-              <View style={styles.statusRow}>
-                {STATUS_FAVORITO.filter((s) => s !== 'descartado').map((s) => (
+            {ehEmpresa && (
+              <>
+                <View style={styles.favRow}>
                   <Pressable
-                    key={s}
-                    style={[styles.stBtn, favStatus.data === s && styles.stBtnOn]}
-                    onPress={() => statusMut.mutate(s)}
+                    style={[styles.favBtn, favStatus.data && styles.favBtnOn]}
+                    onPress={() => favBtn.mutate()}
+                    disabled={favBtn.isPending}
                   >
-                    <Text style={[styles.stTxt, favStatus.data === s && styles.stTxtOn]}>
-                      {ROTULO_STATUS[s]}
+                    <Text style={[styles.favBtnTxt, favStatus.data && styles.favBtnTxtOn]}>
+                      {favStatus.data ? '★ Favoritado' : '☆ Favoritar'}
                     </Text>
                   </Pressable>
-                ))}
-              </View>
+                </View>
+                {favStatus.data && (
+                  <View style={styles.statusRow}>
+                    {STATUS_FAVORITO.filter((s) => s !== 'descartado').map((s) => (
+                      <Pressable
+                        key={s}
+                        style={[styles.stBtn, favStatus.data === s && styles.stBtnOn]}
+                        onPress={() => statusMut.mutate(s)}
+                      >
+                        <Text style={[styles.stTxt, favStatus.data === s && styles.stTxtOn]}>
+                          {ROTULO_STATUS[s]}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                )}
+              </>
             )}
 
             {d.compatibilidade && <CompatCard c={d.compatibilidade} />}

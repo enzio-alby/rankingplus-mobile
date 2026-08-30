@@ -3,9 +3,9 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import { useSession } from '@/auth/session';
-import { getDashboard, getDesempenho } from '@/api/aluno';
+import { getDashboard, getDesempenho, getFrequenciaDisciplinas } from '@/api/aluno';
 import { ScreenScroll, Titulo, Card, Estado, StatTile } from '@/components/ui';
-import { LinhaChart } from '@/components/chart';
+import { LinhaChart, BarrasChart } from '@/components/chart';
 import { colors, spacing, radius, typography } from '@/theme/tokens';
 
 export function DashboardScreen() {
@@ -14,6 +14,7 @@ export function DashboardScreen() {
   const id = sessao?.id ?? 0;
   const q = useQuery({ queryKey: ['dashboard', id], queryFn: () => getDashboard(id) });
   const desemp = useQuery({ queryKey: ['desempenho', id], queryFn: () => getDesempenho(id) });
+  const freq = useQuery({ queryKey: ['freq-disc', id], queryFn: () => getFrequenciaDisciplinas(id) });
   const m = q.data;
 
   return (
@@ -71,6 +72,23 @@ export function DashboardScreen() {
             </Card>
           )}
 
+          {freq.data && freq.data.length > 0 && (
+            <Card>
+              <BarrasChart
+                titulo="Frequência por disciplina (%)"
+                labels={freq.data.map((f) => f.disciplina.split(' ')[0])}
+                values={freq.data.map((f) => f.frequencia)}
+                cores={freq.data.map((f) => (f.frequencia >= 75 ? colors.success : colors.danger))}
+              />
+            </Card>
+          )}
+
+          <Pressable style={styles.link} onPress={() => nav.navigate('Relatorios')}>
+            <Text style={styles.linkTxt}>Ver relatórios completos →</Text>
+          </Pressable>
+          <Pressable style={styles.link} onPress={() => nav.navigate('Talentos')}>
+            <Text style={styles.linkTxt}>Ver o Portal de Talentos →</Text>
+          </Pressable>
           <Pressable style={styles.link} onPress={() => nav.navigate('AlunoBoletim')}>
             <Text style={styles.linkTxt}>Ver boletim completo →</Text>
           </Pressable>

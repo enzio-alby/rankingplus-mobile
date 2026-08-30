@@ -11,7 +11,11 @@ import { TermsScreen } from '@/screens/TermsScreen';
 import { EditarLancamentoScreen } from '@/screens/professor/EditarLancamentoScreen';
 import { ConversaScreen } from '@/screens/ConversaScreen';
 import { NotificacoesScreen } from '@/screens/NotificacoesScreen';
+import { RelatoriosScreen } from '@/screens/aluno/RelatoriosScreen';
+import { TalentosScreen } from '@/screens/empresa/TalentosScreen';
 import { RoleTabs } from '@/navigation/RoleTabs';
+
+const TalentosReadonly = () => <TalentosScreen readonly />;
 import type { RootStackParamList } from '@/navigation/types';
 import { colors } from '@/theme/tokens';
 
@@ -54,6 +58,16 @@ export function RootNavigator() {
               name="Notificacoes"
               component={NotificacoesScreen}
               options={{ headerShown: true, title: 'Notificações' }}
+            />
+            <Stack.Screen
+              name="Relatorios"
+              component={RelatoriosScreen}
+              options={{ headerShown: true, title: 'Relatórios' }}
+            />
+            <Stack.Screen
+              name="Talentos"
+              component={TalentosReadonly}
+              options={{ headerShown: true, title: 'Portal de Talentos' }}
             />
           </>
         ) : (

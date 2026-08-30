@@ -12,6 +12,8 @@ import { ProfTurmasScreen } from '@/screens/professor/TurmasScreen';
 import { ProfPerfilScreen } from '@/screens/professor/PerfilScreen';
 import { TalentosScreen } from '@/screens/empresa/TalentosScreen';
 import { FavoritosScreen } from '@/screens/empresa/FavoritosScreen';
+
+const TalentosReadonly = () => <TalentosScreen readonly />;
 import { EmpVagasScreen } from '@/screens/empresa/VagasScreen';
 import { ContratacoesScreen } from '@/screens/empresa/ContratacoesScreen';
 import { ChatScreen } from '@/screens/ChatScreen';
@@ -39,6 +41,7 @@ const TABS: Record<Papel, TabDef[]> = {
   professor: [
     { name: 'ProfDashboard', titulo: 'Início', icon: 'home', component: ProfDashboardScreen },
     { name: 'ProfTurmas', titulo: 'Turmas', icon: 'people', component: ProfTurmasScreen },
+    { name: 'ProfTalentos', titulo: 'Talentos', icon: 'search', component: TalentosReadonly },
     { name: 'ProfMensagens', titulo: 'Chat', icon: 'chatbubbles', component: ChatScreen },
     { name: 'ProfPerfil', titulo: 'Perfil', icon: 'person', component: ProfPerfilScreen },
   ],
