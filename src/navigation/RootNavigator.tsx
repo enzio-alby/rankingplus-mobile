@@ -13,6 +13,7 @@ import { ConversaScreen } from '@/screens/ConversaScreen';
 import { NotificacoesScreen } from '@/screens/NotificacoesScreen';
 import { RelatoriosScreen } from '@/screens/aluno/RelatoriosScreen';
 import { PerfilAtsScreen } from '@/screens/aluno/PerfilAtsScreen';
+import { RelatorioPreviewScreen } from '@/screens/RelatorioPreviewScreen';
 import { TalentosScreen } from '@/screens/empresa/TalentosScreen';
 import { RoleTabs } from '@/navigation/RoleTabs';
 
@@ -69,6 +70,11 @@ export function RootNavigator() {
               name="PerfilAts"
               component={PerfilAtsScreen}
               options={{ headerShown: true, title: 'Currículo / Perfil profissional' }}
+            />
+            <Stack.Screen
+              name="RelatorioPreview"
+              component={RelatorioPreviewScreen}
+              options={{ headerShown: true, title: 'Prévia do relatório' }}
             />
             <Stack.Screen
               name="Talentos"

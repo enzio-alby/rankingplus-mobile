@@ -1,4 +1,4 @@
-import { apiFetch, ApiError } from '@/api/client';
+import { apiFetch, apiUpload, ApiError } from '@/api/client';
 import { modoLocal } from '@/api/mode';
 import {
   conversasLocais,
@@ -6,6 +6,16 @@ import {
   enviarMensagemLocal,
 } from '@/db/bootstrap';
 import type { Papel } from '@/types/api';
+
+/** Limite de anexo — casa com o multer do backend (`_chatPdfUpload`, 5 MB). */
+export const ANEXO_MAX_BYTES = 5 * 1024 * 1024;
+
+export type AnexoMensagem = {
+  id: number;
+  nome: string;
+  tamanho_bytes: number;
+  expirado?: boolean;
+};
 
 export type Conversa = {
   id: number;
@@ -24,6 +34,7 @@ export type Mensagem = {
   texto: string;
   lida: boolean;
   criado_em: string;
+  anexo?: AnexoMensagem | null;
 };
 
 async function comFallback<T>(viaApi: () => Promise<T>, viaLocal: () => Promise<T>): Promise<T> {
@@ -50,13 +61,38 @@ export function getMensagens(conversaId: number) {
   );
 }
 
-export function enviarMensagem(conversaId: number, tipo: Papel, id: number, texto: string) {
+export function enviarMensagem(
+  conversaId: number,
+  tipo: Papel,
+  id: number,
+  texto: string,
+  anexoId?: number,
+) {
   return comFallback<unknown>(
     () =>
       apiFetch(`/chat/conversas/${conversaId}/mensagens`, {
         method: 'POST',
-        body: { texto },
+        body: { texto, anexo_id: anexoId ?? null },
       }),
+    // Demo não envia anexo (a UI bloqueia antes) — só o texto vai pro SQLite.
     () => enviarMensagemLocal(conversaId, tipo, id, texto),
   );
+}
+
+/**
+ * Sobe um PDF pro backend (`POST /chat/anexos`, multipart campo `pdf`). Só faz
+ * sentido logado de verdade — a demo não tem token que o backend aceite.
+ * Retorna o `anexo_id` pra anexar na mensagem seguinte.
+ */
+export async function enviarAnexoChat(
+  fileUri: string,
+  fileName: string,
+): Promise<{ anexo_id: number; nome: string; tamanho_bytes: number }> {
+  const form = new FormData();
+  form.append('pdf', {
+    uri: fileUri,
+    name: fileName || 'anexo.pdf',
+    type: 'application/pdf',
+  } as unknown as Blob);
+  return apiUpload('/chat/anexos', form);
 }

@@ -11,6 +11,7 @@ import { getDesempenho, getFiltros } from '@/api/aluno';
 import { ScreenScroll, Titulo, Card, Estado, StatTile } from '@/components/ui';
 import { LinhaChart } from '@/components/chart';
 import { FiltroBar, SelectPill } from '@/components/filtro';
+import { RelatorioAcoes } from '@/components/RelatorioAcoes';
 import { colors, spacing, radius, typography } from '@/theme/tokens';
 import { STATUS_FAVORITO, type Compatibilidade, type StatusFavorito } from '@/api_mobile';
 
@@ -225,6 +226,12 @@ function CandidatoModal({
             <Text style={styles.sub}>
               {[d.curso, d.semestre ? `${d.semestre}º sem.` : null].filter(Boolean).join(' · ')}
             </Text>
+
+            <RelatorioAcoes
+              alunoId={alunoId as number}
+              nome={d.nome}
+              onAntesDeVisualizar={onClose}
+            />
 
             {ehEmpresa && (
               <>

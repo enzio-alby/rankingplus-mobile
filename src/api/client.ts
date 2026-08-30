@@ -35,6 +35,11 @@ export function setAuth(token: string | null, onUnauthorized?: () => void) {
   if (onUnauthorized !== undefined) auth.onUnauthorized = onUnauthorized;
 }
 
+/** Token atual da sessão — usado por downloads autenticados (FileSystem.downloadAsync). */
+export function getToken(): string | null {
+  return auth.token;
+}
+
 type FetchOpts = {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
   body?: unknown;
@@ -90,4 +95,36 @@ function safeJson(s: string): unknown {
   } catch {
     return s;
   }
+}
+
+/**
+ * Upload multipart (anexos do chat). Não seta Content-Type — o RN preenche o
+ * boundary sozinho a partir do FormData. Mesmo tratamento de erro do apiFetch.
+ */
+export async function apiUpload<T = unknown>(path: string, form: FormData): Promise<T> {
+  const headers: Record<string, string> = {};
+  if (auth.token) headers.Authorization = `Bearer ${auth.token}`;
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, { method: 'POST', headers, body: form });
+  } catch {
+    throw new ApiError(0, null, 'Sem conexão com o servidor.');
+  }
+
+  const texto = await res.text();
+  const data = texto ? safeJson(texto) : null;
+
+  if (res.status === 401) {
+    auth.token = null;
+    auth.onUnauthorized?.();
+  }
+  if (!res.ok) {
+    const msg =
+      (data && typeof data === 'object' &&
+        ((data as any).mensagem || (data as any).erro || (data as any).error)) ||
+      `Erro ${res.status}`;
+    throw new ApiError(res.status, data, String(msg));
+  }
+  return data as T;
 }

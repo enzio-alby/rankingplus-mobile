@@ -16,6 +16,7 @@ import type {
 } from '@/api_mobile';
 import { ScreenScroll, Titulo, Card, Estado } from '@/components/ui';
 import { SelectPill } from '@/components/filtro';
+import { RelatorioAcoes } from '@/components/RelatorioAcoes';
 import { colors, spacing, radius, typography } from '@/theme/tokens';
 
 const NIVEIS_IDIOMA = ['Básico', 'Intermediário', 'Avançado', 'Fluente', 'Nativo'];
@@ -129,6 +130,8 @@ export function PerfilAtsScreen() {
 
       {q.data && (
         <>
+          {!editando && <RelatorioAcoes alunoId={id} nome={q.data ? sessao?.nome ?? 'Aluno' : 'Aluno'} />}
+
           {/* ── Resumo ── */}
           <Secao titulo="Resumo profissional" />
           <Card>

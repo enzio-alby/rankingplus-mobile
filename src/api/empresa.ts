@@ -34,7 +34,7 @@ export function getTalentos(empresaId: number, f: local.FiltroTalentos = {}) {
   );
 }
 
-export function getPerfilCandidato(alunoId: number, empresaId: number) {
+export function getPerfilCandidato(alunoId: number, empresaId?: number) {
   return comFallback<local.PerfilCandidato>(
     () => apiFetch(`/talentos/aluno/${alunoId}/perfil?vaga_id=`),
     () => local.perfilCandidato(alunoId, empresaId),

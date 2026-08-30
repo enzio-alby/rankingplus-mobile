@@ -542,6 +542,8 @@ export type PerfilCandidato = {
   nome: string;
   curso: string | null;
   semestre: number | null;
+  github: string | null;
+  linkedin: string | null;
   metricas: MetricasAluno;
   disciplinas_destaque: { nome_materia: string; mencao: string | null; nota: number }[];
   compatibilidade: Compatibilidade | null;
@@ -551,8 +553,15 @@ export async function perfilCandidato(
   alunoId: number,
   empresaId?: number,
 ): Promise<PerfilCandidato> {
-  const a = await first<{ nome: string; curso: string | null; semestre: number | null }>(
-    'SELECT nome, curso, semestre_atual AS semestre FROM alunos WHERE id = ?', [alunoId],
+  const a = await first<{
+    nome: string;
+    curso: string | null;
+    semestre: number | null;
+    github: string | null;
+    linkedin: string | null;
+  }>(
+    'SELECT nome, curso, semestre_atual AS semestre, github, linkedin FROM alunos WHERE id = ?',
+    [alunoId],
   );
   const metricas = await dashboardAluno(alunoId);
   const destaque = await all<{ nome_materia: string; mencao: string | null; nota: number }>(
@@ -572,6 +581,8 @@ export async function perfilCandidato(
     nome: a?.nome ?? '',
     curso: a?.curso ?? null,
     semestre: a?.semestre ?? null,
+    github: a?.github ?? null,
+    linkedin: a?.linkedin ?? null,
     metricas,
     disciplinas_destaque: destaque,
     compatibilidade: compat,
