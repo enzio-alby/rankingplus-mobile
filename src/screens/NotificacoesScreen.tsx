@@ -5,6 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSession } from '@/auth/session';
 import { getNotificacoes, marcarLida, marcarTodasLidas } from '@/api/notificacoes';
+import { getConversas } from '@/api/chat';
 import { ScreenScroll, Card, Estado } from '@/components/ui';
 import { colors, spacing, radius, typography } from '@/theme/tokens';
 
@@ -38,6 +39,11 @@ export function NotificacoesScreen() {
     queryKey: ['notificacoes', tipo, id],
     queryFn: () => getNotificacoes(tipo, id),
   });
+  // Pra resolver nome/participante da conversa referenciada por uma notificação.
+  const conversas = useQuery({
+    queryKey: ['conversas', tipo, id],
+    queryFn: () => getConversas(tipo, id),
+  });
 
   function invalidar() {
     qc.invalidateQueries({ queryKey: ['notificacoes', tipo, id] });
@@ -49,7 +55,13 @@ export function NotificacoesScreen() {
   function abrir(n: { id: number; tipo: string; titulo: string; referencia_id: number | null; lida: number }) {
     if (!Number(n.lida)) lerUma.mutate(n.id);
     if (TIPO_CONVERSA.includes(n.tipo) && n.referencia_id) {
-      nav.navigate('Conversa', { conversaId: n.referencia_id, nome: n.titulo });
+      const c = (conversas.data ?? []).find((x) => x.id === n.referencia_id);
+      nav.navigate('Conversa', {
+        conversaId: n.referencia_id,
+        nome: c?.outro_nome ?? n.titulo,
+        outroTipo: c?.outro_tipo,
+        outroId: c?.outro_id,
+      });
     }
   }
 

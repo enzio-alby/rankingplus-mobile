@@ -1,24 +1,33 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TextInput, Pressable, Switch, ActivityIndicator, Alert } from 'react-native';
+import {
+  View, Text, StyleSheet, TextInput, Pressable, Switch, ScrollView,
+  ActivityIndicator, Alert,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import { useSession } from '@/auth/session';
-import { getMeuPerfil, salvarMeuPerfil } from '@/api/aluno';
-import { ScreenScroll, Titulo, Card, Estado } from '@/components/ui';
+import { getMeuPerfil, salvarMeuPerfil, getDashboard } from '@/api/aluno';
+import { Estado } from '@/components/ui';
 import { colors, spacing, radius, typography } from '@/theme/tokens';
 
 export function MeuPerfilScreen() {
   const { sessao, sair } = useSession();
   const nav = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   const qc = useQueryClient();
   const id = sessao?.id ?? 0;
   const q = useQuery({ queryKey: ['meu-perfil', id], queryFn: () => getMeuPerfil(id) });
+  const dash = useQuery({ queryKey: ['aluno-dash', id], queryFn: () => getDashboard(id) });
 
   const [nome, setNome] = useState('');
   const [telefone, setTelefone] = useState('');
   const [github, setGithub] = useState('');
   const [linkedin, setLinkedin] = useState('');
   const [ranking, setRanking] = useState(true);
+  const [editando, setEditando] = useState(false);
 
   useEffect(() => {
     if (q.data) {
@@ -42,64 +51,130 @@ export function MeuPerfilScreen() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['meu-perfil', id] });
       qc.invalidateQueries({ queryKey: ['ranking'] });
+      setEditando(false);
       Alert.alert('Pronto', 'Perfil atualizado.');
     },
     onError: (e) => Alert.alert('Erro', e instanceof Error ? e.message : 'Não foi possível salvar.'),
   });
 
+  const inicial = (q.data?.nome ?? sessao?.nome ?? '?')[0]?.toUpperCase() ?? '?';
+  const pos = dash.data?.posicao_ranking;
+
   return (
-    <ScreenScroll onRefresh={q.refetch} refreshing={q.isRefetching}>
-      <View style={styles.top}>
-        <Titulo>Meu Perfil</Titulo>
-        <Pressable onPress={() => void sair()} style={styles.sair}>
-          <Text style={styles.sairTxt}>Sair</Text>
-        </Pressable>
-      </View>
+    <View style={styles.fill}>
+      <LinearGradient
+        colors={[colors.primary, '#241f52']}
+        style={[styles.header, { paddingTop: insets.top + spacing.lg }]}
+      >
+        <View style={styles.avatar}>
+          <Text style={styles.avatarTxt}>{inicial}</Text>
+        </View>
+        <Text style={styles.nomeHead}>{q.data?.nome ?? sessao?.nome}</Text>
+        <Text style={styles.emailHead}>{q.data?.email ?? ''}</Text>
+        {q.data?.curso ? (
+          <Text style={styles.tit}>
+            {q.data.curso}
+            {q.data.semestre_atual ? ` · ${q.data.semestre_atual}º sem.` : ''}
+          </Text>
+        ) : null}
 
-      <Estado carregando={q.isLoading} erro={q.isError ? 'Erro ao carregar perfil.' : null} onRetry={q.refetch} />
+        {dash.data && (
+          <View style={styles.statsRow}>
+            <Mini valor={dash.data.media_geral ?? '—'} rotulo="média" />
+            <Mini valor={pos ? `${pos}º` : '—'} rotulo="ranking" />
+            <Mini valor={`${Math.round(dash.data.frequencia)}%`} rotulo="presença" />
+          </View>
+        )}
+      </LinearGradient>
 
-      {q.data && (
-        <>
-          <Card>
-            <Text style={styles.readonly}>
-              {q.data.email} · {q.data.curso ?? '—'}
-              {q.data.semestre_atual ? ` · ${q.data.semestre_atual}º sem.` : ''}
-            </Text>
+      <ScrollView contentContainerStyle={styles.body}>
+        <Estado carregando={q.isLoading} erro={q.isError ? 'Erro ao carregar perfil.' : null} onRetry={q.refetch} />
 
-            <Campo label="Nome" value={nome} onChange={setNome} />
-            <Campo label="Telefone" value={telefone} onChange={setTelefone} keyboard="phone-pad" />
-            <Campo label="GitHub (URL)" value={github} onChange={setGithub} />
-            <Campo label="LinkedIn (URL)" value={linkedin} onChange={setLinkedin} />
-
-            <View style={styles.toggle}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.toggleTit}>Aparecer no ranking público</Text>
-                <Text style={styles.toggleSub}>
-                  {ranking ? 'Seu nome aparece pra empresas.' : 'Você aparece como “Aluno Anônimo”.'}
-                </Text>
-              </View>
-              <Switch value={ranking} onValueChange={setRanking} />
+        {q.data && (
+          <>
+            <View style={styles.cardHead}>
+              <Text style={styles.cardTit}>Dados</Text>
+              <Pressable onPress={() => setEditando((v) => !v)}>
+                <Text style={styles.editar}>{editando ? 'Cancelar' : 'Editar'}</Text>
+              </Pressable>
             </View>
-          </Card>
 
-          <Pressable style={[styles.salvar, m.isPending && { opacity: 0.6 }]} disabled={m.isPending} onPress={() => m.mutate()}>
-            {m.isPending ? <ActivityIndicator color="#fff" /> : <Text style={styles.salvarTxt}>Salvar</Text>}
-          </Pressable>
-        </>
-      )}
+            {editando ? (
+              <View style={styles.card}>
+                <Campo label="Nome" value={nome} onChange={setNome} />
+                <Campo label="Telefone" value={telefone} onChange={setTelefone} keyboard="phone-pad" />
+                <Campo label="GitHub (URL)" value={github} onChange={setGithub} />
+                <Campo label="LinkedIn (URL)" value={linkedin} onChange={setLinkedin} />
 
-      <Pressable style={styles.termos} onPress={() => nav.navigate('Termos', { origem: 'app' })}>
-        <Text style={styles.termosTxt}>Termos e privacidade</Text>
-      </Pressable>
-    </ScreenScroll>
+                <View style={styles.toggle}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.toggleTit}>Aparecer no ranking público</Text>
+                    <Text style={styles.toggleSub}>
+                      {ranking ? 'Seu nome aparece pra empresas.' : 'Você aparece como “Aluno Anônimo”.'}
+                    </Text>
+                  </View>
+                  <Switch value={ranking} onValueChange={setRanking} />
+                </View>
+
+                <Pressable
+                  style={[styles.salvar, m.isPending && { opacity: 0.6 }]}
+                  disabled={m.isPending}
+                  onPress={() => m.mutate()}
+                >
+                  {m.isPending ? <ActivityIndicator color="#fff" /> : <Text style={styles.salvarTxt}>Salvar</Text>}
+                </Pressable>
+              </View>
+            ) : (
+              <View style={styles.card}>
+                <Linha icon="call" label="Telefone" valor={q.data.telefone} />
+                <Linha icon="logo-github" label="GitHub" valor={q.data.github} />
+                <Linha icon="logo-linkedin" label="LinkedIn" valor={q.data.linkedin} />
+                <Linha
+                  icon="eye"
+                  label="Ranking público"
+                  valor={Number(q.data.permitir_exibicao_ranking) === 1 ? 'Sim' : 'Anônimo'}
+                />
+              </View>
+            )}
+
+            <Pressable style={styles.linkRow} onPress={() => nav.navigate('Termos', { origem: 'app' })}>
+              <Ionicons name="document-text-outline" size={18} color={colors.textMuted} />
+              <Text style={styles.linkTxt}>Termos e privacidade</Text>
+            </Pressable>
+            <Pressable style={styles.linkRow} onPress={() => void sair()}>
+              <Ionicons name="log-out-outline" size={18} color={colors.danger} />
+              <Text style={[styles.linkTxt, { color: colors.danger }]}>Sair</Text>
+            </Pressable>
+          </>
+        )}
+      </ScrollView>
+    </View>
+  );
+}
+
+function Mini({ valor, rotulo }: { valor: string | number; rotulo: string }) {
+  return (
+    <View style={styles.mini}>
+      <Text style={styles.miniVal}>{valor}</Text>
+      <Text style={styles.miniLbl}>{rotulo}</Text>
+    </View>
+  );
+}
+
+function Linha({
+  icon, label, valor,
+}: { icon: keyof typeof Ionicons.glyphMap; label: string; valor: string | null }) {
+  return (
+    <View style={styles.dl}>
+      <Ionicons name={icon} size={16} color={colors.textMuted} style={{ width: 22 }} />
+      <Text style={styles.dt}>{label}</Text>
+      <Text style={styles.dd} numberOfLines={1}>{valor || '—'}</Text>
+    </View>
   );
 }
 
 function Campo({
-  label,
-  value,
-  onChange,
-  keyboard,
+  label, value, onChange, keyboard,
 }: {
   label: string;
   value: string;
@@ -122,11 +197,42 @@ function Campo({
 }
 
 const styles = StyleSheet.create({
-  top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  sair: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
-  sairTxt: { ...typography.small, color: colors.danger, fontWeight: '600' },
-  readonly: { ...typography.small, color: colors.textMuted, marginBottom: spacing.sm },
-  label: { ...typography.small, color: colors.textMuted, marginTop: spacing.md, marginBottom: 4 },
+  fill: { flex: 1, backgroundColor: colors.bgMuted },
+  header: {
+    paddingHorizontal: spacing.xl,
+    paddingBottom: spacing.xl,
+    alignItems: 'center',
+    borderBottomLeftRadius: radius.lg,
+    borderBottomRightRadius: radius.lg,
+  },
+  avatar: {
+    width: 68, height: 68, borderRadius: 34, backgroundColor: 'rgba(255,255,255,0.14)',
+    alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm,
+  },
+  avatarTxt: { color: '#fff', fontSize: 26, fontWeight: '800' },
+  nomeHead: { ...typography.h2, color: '#fff', textAlign: 'center' },
+  emailHead: { ...typography.small, color: 'rgba(255,255,255,0.7)', marginTop: 2 },
+  tit: { ...typography.tiny, color: colors.accent, marginTop: 4, fontWeight: '700' },
+  statsRow: {
+    flexDirection: 'row', gap: spacing.xl, marginTop: spacing.lg,
+    backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: radius.md,
+    paddingVertical: spacing.sm, paddingHorizontal: spacing.xl,
+  },
+  mini: { alignItems: 'center' },
+  miniVal: { ...typography.h3, color: '#fff' },
+  miniLbl: { ...typography.tiny, color: 'rgba(255,255,255,0.7)' },
+  body: { padding: spacing.md, gap: spacing.sm, paddingBottom: spacing.xxl },
+  cardHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.sm },
+  cardTit: { ...typography.h3, color: colors.text },
+  editar: { ...typography.small, color: colors.accent, fontWeight: '700' },
+  card: {
+    backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md,
+    borderWidth: 1, borderColor: colors.border,
+  },
+  dl: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.sm, gap: spacing.sm },
+  dt: { ...typography.small, color: colors.textMuted, width: 120 },
+  dd: { ...typography.body, color: colors.text, flex: 1, textAlign: 'right' },
+  label: { ...typography.small, color: colors.textMuted, marginTop: spacing.sm, marginBottom: 4 },
   input: {
     borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
     paddingHorizontal: spacing.md, paddingVertical: spacing.md, fontSize: 15, color: colors.text,
@@ -134,8 +240,11 @@ const styles = StyleSheet.create({
   toggle: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginTop: spacing.lg },
   toggleTit: { ...typography.body, color: colors.text, fontWeight: '600' },
   toggleSub: { ...typography.tiny, color: colors.textMuted, marginTop: 2 },
-  salvar: { backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: spacing.lg, alignItems: 'center', marginTop: spacing.lg },
+  salvar: {
+    backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: spacing.md,
+    alignItems: 'center', marginTop: spacing.md,
+  },
   salvarTxt: { ...typography.h3, color: '#fff' },
-  termos: { paddingVertical: spacing.lg, alignItems: 'center' },
-  termosTxt: { ...typography.small, color: colors.textMuted },
+  linkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.md },
+  linkTxt: { ...typography.body, color: colors.textMuted },
 });
