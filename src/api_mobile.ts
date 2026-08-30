@@ -44,7 +44,16 @@ export async function boletimDetalhado(alunoId: number): Promise<DisciplinaBolet
 // ─── ALUNO — DESEMPENHO POR SEMESTRE (gráfico) ─────────────────────────────
 export type SerieDesempenho = { labels: string[]; values: number[] };
 
-export async function desempenhoSemestral(alunoId: number): Promise<SerieDesempenho> {
+/** Mesma semântica do `?filtro=` / `?agrupar=ano` da rota do backend. */
+export type OpcoesDesempenho = {
+  periodo?: 'semestral' | 'anual' | 'completo';
+  porAno?: boolean;
+};
+
+export async function desempenhoSemestral(
+  alunoId: number,
+  opts: OpcoesDesempenho = {},
+): Promise<SerieDesempenho> {
   const rows = await all<{ sem: string; media: number }>(
     `SELECT semestre_cursado AS sem, ROUND(AVG(${NOTA('mencao')}), 1) AS media
        FROM boletim
@@ -53,9 +62,37 @@ export async function desempenhoSemestral(alunoId: number): Promise<SerieDesempe
       ORDER BY semestre_cursado ASC`,
     [alunoId],
   );
+  let base = rows.map((r) => ({ rotulo: String(r.sem), media: Number(r.media) }));
+
+  if (opts.porAno) {
+    const porAno = new Map<string, number[]>();
+    for (const r of base) {
+      const ano = r.rotulo.split('.')[0];
+      if (!porAno.has(ano)) porAno.set(ano, []);
+      porAno.get(ano)!.push(r.media);
+    }
+    base = [...porAno.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([ano, ms]) => ({
+        rotulo: ano,
+        media: Number((ms.reduce((s, m) => s + m, 0) / ms.length).toFixed(1)),
+      }));
+  }
+
+  const periodo = opts.periodo ?? 'completo';
+  const qtd =
+    periodo === 'completo'
+      ? base.length
+      : periodo === 'semestral'
+        ? 2
+        : opts.porAno
+          ? 3
+          : 4;
+  const janela = base.slice(-qtd);
+
   return {
-    labels: rows.map((r) => String(r.sem).slice(2)),
-    values: rows.map((r) => Number(r.media)),
+    labels: janela.map((r) => (opts.porAno ? r.rotulo : r.rotulo.slice(2))),
+    values: janela.map((r) => r.media),
   };
 }
 

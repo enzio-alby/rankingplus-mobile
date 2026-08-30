@@ -103,15 +103,18 @@ export function getAreasFoco() {
 }
 
 // ─── Gráficos ──────────────────────────────────────────────────────────────
-export function getDesempenho(alunoId: number) {
+export function getDesempenho(alunoId: number, opts: local.OpcoesDesempenho = {}) {
+  const periodo = opts.periodo ?? 'completo';
   return comFallback<local.SerieDesempenho>(
     async () => {
+      const qs = new URLSearchParams({ filtro: periodo });
+      if (opts.porAno) qs.set('agrupar', 'ano');
       const r = await apiFetch<{ labels?: string[]; values?: number[] }>(
-        `/alunos/${alunoId}/desempenho-semestral?filtro=completo`,
+        `/alunos/${alunoId}/desempenho-semestral?${qs}`,
       );
       return { labels: r.labels ?? [], values: (r.values ?? []).map(Number) };
     },
-    () => local.desempenhoSemestral(alunoId),
+    () => local.desempenhoSemestral(alunoId, opts),
   );
 }
 

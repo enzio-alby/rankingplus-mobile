@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import { useSession } from '@/auth/session';
 import { getStatsProfessor, getDisciplinasProfessor, getStatsDisciplinas } from '@/api/professor';
 import { ScreenScroll, Titulo, Card, Estado, StatTile } from '@/components/ui';
+import { FiltroBar, SelectPill } from '@/components/filtro';
 import { BarrasChart } from '@/components/chart';
 import { colors, spacing, radius, typography } from '@/theme/tokens';
 
@@ -14,18 +15,24 @@ export function ProfDashboardScreen() {
   const { sessao, sair } = useSession();
   const nav = useNavigation<any>();
   const id = sessao?.id ?? 0;
+  const [discFiltro, setDiscFiltro] = useState<string | null>(null);
   const stats = useQuery({ queryKey: ['prof-stats', id], queryFn: () => getStatsProfessor(id) });
   const discs = useQuery({ queryKey: ['prof-discs', id], queryFn: () => getDisciplinasProfessor(id) });
   const dstats = useQuery({ queryKey: ['prof-dstats', id], queryFn: () => getStatsDisciplinas(id) });
   const s = stats.data;
 
-  const mencTotais = (dstats.data ?? []).reduce(
+  // Distribuição de menções: todas as turmas, ou só a disciplina escolhida.
+  const linhasMenc = discFiltro
+    ? (dstats.data ?? []).filter((d) => String(d.id) === discFiltro)
+    : (dstats.data ?? []);
+  const mencTotais = linhasMenc.reduce(
     (acc, d) => [
       acc[0] + Number(d.cnt_ss || 0), acc[1] + Number(d.cnt_ms || 0), acc[2] + Number(d.cnt_mm || 0),
       acc[3] + Number(d.cnt_mi || 0), acc[4] + Number(d.cnt_ii || 0),
     ],
     [0, 0, 0, 0, 0],
   );
+  const nomeDiscFiltro = (dstats.data ?? []).find((d) => String(d.id) === discFiltro)?.nome_materia;
 
   return (
     <ScreenScroll
@@ -75,14 +82,31 @@ export function ProfDashboardScreen() {
               values={dstats.data.map((d) => Number(d.media ?? 0))}
             />
           </Card>
-          {mencTotais.some((n) => n > 0) && (
+
+          <FiltroBar>
+            <SelectPill
+              label="Disciplina"
+              value={discFiltro}
+              onChange={setDiscFiltro}
+              options={[
+                { label: 'Todas as turmas', value: null },
+                ...dstats.data.map((d) => ({ label: d.nome_materia, value: String(d.id) })),
+              ]}
+            />
+          </FiltroBar>
+
+          {mencTotais.some((n) => n > 0) ? (
             <Card>
               <BarrasChart
-                titulo="Distribuição de menções (todas as turmas)"
+                titulo={`Distribuição de menções — ${nomeDiscFiltro ?? 'todas as turmas'}`}
                 labels={['SS', 'MS', 'MM', 'MI', 'II']}
                 values={mencTotais}
                 cores={CORES_MENCAO}
               />
+            </Card>
+          ) : (
+            <Card>
+              <Text style={styles.vazioMenc}>Sem menções lançadas nessa disciplina.</Text>
             </Card>
           )}
         </>
@@ -129,4 +153,5 @@ const styles = StyleSheet.create({
   sub: { ...typography.small, color: colors.textMuted, marginTop: 2 },
   pill: { backgroundColor: colors.bgMuted, borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 4 },
   pillTxt: { ...typography.small, color: colors.textMuted, fontWeight: '600' },
+  vazioMenc: { ...typography.small, color: colors.textMuted, textAlign: 'center', paddingVertical: spacing.md },
 });

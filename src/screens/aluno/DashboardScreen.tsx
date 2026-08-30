@@ -1,19 +1,27 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import { useSession } from '@/auth/session';
 import { getDashboard, getDesempenho, getFrequenciaDisciplinas } from '@/api/aluno';
 import { ScreenScroll, Titulo, Card, Estado, StatTile } from '@/components/ui';
+import { FiltroBar, SelectPill } from '@/components/filtro';
 import { LinhaChart, BarrasChart } from '@/components/chart';
+import { PERIODOS_DESEMPENHO as PERIODOS, PERIODO_PADRAO } from '@/lib/periodoDesempenho';
 import { colors, spacing, radius, typography } from '@/theme/tokens';
 
 export function DashboardScreen() {
   const { sessao, sair } = useSession();
   const nav = useNavigation<any>();
   const id = sessao?.id ?? 0;
+  const [periodo, setPeriodo] = useState<string>(PERIODO_PADRAO);
+  const cfgPeriodo = PERIODOS[periodo] ?? PERIODOS[PERIODO_PADRAO];
+
   const q = useQuery({ queryKey: ['dashboard', id], queryFn: () => getDashboard(id) });
-  const desemp = useQuery({ queryKey: ['desempenho', id], queryFn: () => getDesempenho(id) });
+  const desemp = useQuery({
+    queryKey: ['desempenho', id, periodo],
+    queryFn: () => getDesempenho(id, cfgPeriodo.opts),
+  });
   const freq = useQuery({ queryKey: ['freq-disc', id], queryFn: () => getFrequenciaDisciplinas(id) });
   const m = q.data;
 
@@ -62,10 +70,19 @@ export function DashboardScreen() {
             />
           </View>
 
+          <FiltroBar>
+            <SelectPill
+              label="Período"
+              value={periodo}
+              onChange={(v) => setPeriodo(v ?? PERIODO_PADRAO)}
+              options={Object.entries(PERIODOS).map(([value, p]) => ({ label: p.label, value }))}
+            />
+          </FiltroBar>
+
           {desemp.data && desemp.data.values.length > 1 && (
             <Card>
               <LinhaChart
-                titulo="Evolução das notas (por semestre)"
+                titulo={`Evolução das notas — ${cfgPeriodo.label}`}
                 labels={desemp.data.labels}
                 values={desemp.data.values}
               />
