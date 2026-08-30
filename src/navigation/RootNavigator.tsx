@@ -10,6 +10,7 @@ import { OtpScreen } from '@/screens/OtpScreen';
 import { TermsScreen } from '@/screens/TermsScreen';
 import { EditarLancamentoScreen } from '@/screens/professor/EditarLancamentoScreen';
 import { ConversaScreen } from '@/screens/ConversaScreen';
+import { NovaConversaScreen } from '@/screens/NovaConversaScreen';
 import { NotificacoesScreen } from '@/screens/NotificacoesScreen';
 import { RelatoriosScreen } from '@/screens/aluno/RelatoriosScreen';
 import { PerfilAtsScreen } from '@/screens/aluno/PerfilAtsScreen';
@@ -55,6 +56,11 @@ export function RootNavigator() {
               name="Conversa"
               component={ConversaScreen}
               options={({ route }) => ({ headerShown: true, title: route.params.nome })}
+            />
+            <Stack.Screen
+              name="NovaConversa"
+              component={NovaConversaScreen}
+              options={{ headerShown: true, title: 'Nova conversa' }}
             />
             <Stack.Screen
               name="Notificacoes"

@@ -4,8 +4,13 @@ import {
   conversasLocais,
   mensagensLocais,
   enviarMensagemLocal,
+  contatosLocais,
+  abrirConversaLocal,
 } from '@/db/bootstrap';
 import type { Papel } from '@/types/api';
+
+export type Contato = { id: number; nome: string; permite_contato?: boolean };
+export type Contatos = { professores: Contato[]; alunos: Contato[] };
 
 /** Limite de anexo — casa com o multer do backend (`_chatPdfUpload`, 5 MB). */
 export const ANEXO_MAX_BYTES = 5 * 1024 * 1024;
@@ -51,6 +56,37 @@ export function getConversas(tipo: Papel, id: number) {
   return comFallback<Conversa[]>(
     () => apiFetch(`/chat/conversas/participante/${tipo}/${id}`),
     () => conversasLocais() as Promise<Conversa[]>,
+  );
+}
+
+/** Contatos com quem dá pra iniciar uma conversa (só aluno e professor). */
+export function getContatos(tipo: Papel, id: number) {
+  return comFallback<Contatos>(
+    async () => {
+      const r = await apiFetch<{ professores?: Contato[]; alunos?: Contato[] }>(
+        `/chat/contatos/${tipo}/${id}`,
+      );
+      return { professores: r.professores ?? [], alunos: r.alunos ?? [] };
+    },
+    () => contatosLocais(tipo, id),
+  );
+}
+
+/** Abre (ou reaproveita) a conversa com o contato escolhido. Retorna o id. */
+export function abrirConversa(
+  meuTipo: Papel,
+  meuId: number,
+  outroTipo: Papel,
+  outroId: number,
+  outroNome: string,
+) {
+  return comFallback<{ conversa_id: number }>(
+    () =>
+      apiFetch(`/chat/conversas`, {
+        method: 'POST',
+        body: { outro_tipo: outroTipo, outro_id: outroId },
+      }),
+    () => abrirConversaLocal(outroTipo, outroId, outroNome),
   );
 }
 

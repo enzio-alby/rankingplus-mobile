@@ -33,6 +33,7 @@ export type RootStackParamList = {
   Talentos: undefined;
   PerfilAts: undefined;
   RelatorioPreview: { alunoId: number; nome: string };
+  NovaConversa: undefined;
   // sempre disponível
   Termos: { origem: 'inicial' | 'app' } | undefined;
 };

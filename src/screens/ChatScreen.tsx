@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import { useSession } from '@/auth/session';
@@ -18,9 +19,25 @@ export function ChatScreen() {
     refetchInterval: 6000,
   });
 
+  // Só aluno e professor podem iniciar conversa (o backend recusa empresa).
+  const podeIniciar = sessao?.tipo === 'aluno' || sessao?.tipo === 'professor';
+
   return (
     <ScreenScroll onRefresh={q.refetch} refreshing={q.isRefetching}>
-      <Titulo>Mensagens</Titulo>
+      <View style={styles.top}>
+        <Titulo>Mensagens</Titulo>
+        {podeIniciar && (
+          <Pressable
+            style={styles.novo}
+            onPress={() => nav.navigate('NovaConversa')}
+            accessibilityRole="button"
+            accessibilityLabel="Iniciar nova conversa"
+          >
+            <Ionicons name="create-outline" size={16} color="#fff" />
+            <Text style={styles.novoTxt}>Nova</Text>
+          </Pressable>
+        )}
+      </View>
       <Estado
         carregando={q.isLoading}
         erro={q.isError ? 'Erro ao carregar conversas.' : null}
@@ -68,6 +85,13 @@ export function ChatScreen() {
 }
 
 const styles = StyleSheet.create({
+  top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  novo: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: colors.primary, borderRadius: radius.pill,
+    paddingHorizontal: spacing.md, paddingVertical: 6,
+  },
+  novoTxt: { ...typography.small, color: '#fff', fontWeight: '700' },
   linha: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   avatar: {
     width: 42, height: 42, borderRadius: 21, backgroundColor: colors.primary,

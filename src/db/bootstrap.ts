@@ -226,3 +226,44 @@ export async function enviarMensagemLocal(
     [conversaId, meuTipo, meuId, texto, new Date().toISOString()],
   );
 }
+
+type ContatoLocal = { id: number; nome: string; permite_contato?: boolean };
+
+/** Contatos possíveis pra iniciar conversa (modo demo — lê do SQLite do seed). */
+export async function contatosLocais(
+  meuTipo: string,
+  meuId: number,
+): Promise<{ professores: ContatoLocal[]; alunos: ContatoLocal[] }> {
+  if (meuTipo === 'professor') {
+    const alunos = await all<ContatoLocal>('SELECT id, nome FROM alunos ORDER BY nome');
+    return { professores: [], alunos };
+  }
+  const professores = await all<ContatoLocal>('SELECT id, nome FROM professores ORDER BY nome');
+  const alunosRaw = await all<{ id: number; nome: string; permitir_contato: number | null }>(
+    'SELECT id, nome, COALESCE(permitir_contato, 1) AS permitir_contato FROM alunos WHERE id != ? ORDER BY nome',
+    [meuId],
+  );
+  return {
+    professores,
+    alunos: alunosRaw.map((a) => ({ id: a.id, nome: a.nome, permite_contato: !!a.permitir_contato })),
+  };
+}
+
+/** Cria (ou reaproveita) uma conversa local com o contato escolhido. */
+export async function abrirConversaLocal(
+  outroTipo: string,
+  outroId: number,
+  outroNome: string,
+): Promise<{ conversa_id: number }> {
+  await garantirChatTabelas();
+  const existente = await first<{ id: number }>(
+    'SELECT id FROM chat_conversas WHERE outro_tipo = ? AND outro_id = ? LIMIT 1',
+    [outroTipo, outroId],
+  );
+  if (existente) return { conversa_id: existente.id };
+  const r = await run(
+    'INSERT INTO chat_conversas (outro_tipo, outro_id, outro_nome, criado_em) VALUES (?, ?, ?, ?)',
+    [outroTipo, outroId, outroNome, new Date().toISOString()],
+  );
+  return { conversa_id: r.lastInsertRowId };
+}
