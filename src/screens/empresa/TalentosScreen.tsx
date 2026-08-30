@@ -4,7 +4,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSession } from '@/auth/session';
 import {
-  getTalentos, getPerfilCandidato, getStatusFavorito, favoritar, desfavoritar, mudarStatusFavorito,
+  getTalentos, getPerfilCandidato, getStatusFavorito, getFavoritos,
+  favoritar, desfavoritar, mudarStatusFavorito,
 } from '@/api/empresa';
 import { getDesempenho, getFiltros } from '@/api/aluno';
 import { ScreenScroll, Titulo, Card, Estado, StatTile } from '@/components/ui';
@@ -47,6 +48,8 @@ export function TalentosScreen() {
     queryKey: ['talentos', empId, curso, sem, hab, cra],
     queryFn: () => getTalentos(empId, { curso, semestreMin: sem, habilidade: hab, craMin: cra }),
   });
+  const favs = useQuery({ queryKey: ['favoritos', empId], queryFn: () => getFavoritos(empId) });
+  const favMap = new Map((favs.data ?? []).map((f) => [f.id, f.status]));
   const [sel, setSel] = useState<number | null>(null);
   const temFiltro = !!(curso || sem || hab || cra);
 
@@ -107,14 +110,21 @@ export function TalentosScreen() {
           vazio={q.data?.length === 0}
           onRetry={q.refetch}
         />
-        {q.data?.map((t) => (
+        {q.data?.map((t) => {
+          const st = favMap.get(t.id);
+          return (
           <Pressable key={t.id} onPress={() => setSel(t.id)}>
             <Card>
               <View style={styles.linha}>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.nome}>{t.nome}</Text>
+                  <View style={styles.nomeRow}>
+                    {st && <Text style={styles.star}>★</Text>}
+                    <Text style={styles.nome}>{t.nome}</Text>
+                  </View>
                   <Text style={styles.sub}>
-                    {[t.curso, t.semestre ? `${t.semestre}º sem.` : null].filter(Boolean).join(' · ')}
+                    {[t.curso, t.semestre ? `${t.semestre}º sem.` : null, st ? ROTULO_STATUS[st] : null]
+                      .filter(Boolean)
+                      .join(' · ')}
                   </Text>
                 </View>
                 <View style={styles.dir}>
@@ -139,7 +149,8 @@ export function TalentosScreen() {
               )}
             </Card>
           </Pressable>
-        ))}
+          );
+        })}
       </ScreenScroll>
 
       <CandidatoModal alunoId={sel} empresaId={empId} onClose={() => setSel(null)} />
@@ -176,8 +187,9 @@ function CandidatoModal({
   const d = q.data;
 
   function invalidarFav() {
-    qc.invalidateQueries({ queryKey: ['status-fav', empresaId, alunoId] });
-    qc.invalidateQueries({ queryKey: ['favoritos', empresaId] });
+    qc.invalidateQueries({ queryKey: ['status-fav'] });
+    qc.invalidateQueries({ queryKey: ['favoritos'] });
+    qc.invalidateQueries({ queryKey: ['talentos'] });
   }
   const favBtn = useMutation({
     mutationFn: () =>
@@ -324,6 +336,8 @@ const styles = StyleSheet.create({
   stTxt: { ...typography.small, color: colors.text },
   stTxtOn: { color: '#fff', fontWeight: '700' },
   linha: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  nomeRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  star: { color: colors.accent, fontSize: 14 },
   nome: { ...typography.h3, color: colors.text },
   dir: { alignItems: 'flex-end', gap: 4 },
   cra: { ...typography.small, color: colors.primary, fontWeight: '700' },

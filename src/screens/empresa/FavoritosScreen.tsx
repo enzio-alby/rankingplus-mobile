@@ -28,15 +28,21 @@ export function FavoritosScreen() {
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ['favoritos', empId], queryFn: () => getFavoritos(empId) });
 
+  function invalidarTudo() {
+    qc.invalidateQueries({ queryKey: ['favoritos'] });
+    qc.invalidateQueries({ queryKey: ['status-fav'] });
+    qc.invalidateQueries({ queryKey: ['talentos'] });
+    qc.invalidateQueries({ queryKey: ['candidato'] });
+  }
   const mudar = useMutation({
     mutationFn: (v: { alunoId: number; status: StatusFavorito }) =>
       mudarStatusFavorito(empId, v.alunoId, v.status),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['favoritos', empId] }),
+    onSuccess: invalidarTudo,
     onError: () => Alert.alert('Erro', 'Não foi possível mudar o status.'),
   });
   const remover = useMutation({
     mutationFn: (alunoId: number) => desfavoritar(empId, alunoId),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['favoritos', empId] }),
+    onSuccess: invalidarTudo,
   });
 
   const grupos = STATUS_FAVORITO.map((s) => ({

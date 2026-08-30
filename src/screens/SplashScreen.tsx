@@ -54,15 +54,16 @@ export function SplashScreen({ navigation }: Props) {
           ) : (
             <>
               <Ionicons name="logo-google" size={18} color={colors.primary} />
-              <Text style={styles.googleBtnText}>Entrar com Google</Text>
+              <Text style={styles.googleBtnText}>Entrar com Google · Demonstração</Text>
             </>
           )}
         </Pressable>
+        <Text style={styles.hint}>Explore como aluno, professor ou empresa. Dados temporários.</Text>
 
         {google.erro && <Text style={styles.erro}>{google.erro}</Text>}
 
         <Pressable style={styles.linkBtn} onPress={() => navigation.navigate('LoginEmail')}>
-          <Text style={styles.linkBtnText}>Entrar como usuário</Text>
+          <Text style={styles.linkBtnText}>Entrar com minha conta</Text>
         </Pressable>
 
         <Pressable
@@ -97,7 +98,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  googleBtnText: { ...typography.h3, color: colors.primary },
+  googleBtnText: { ...typography.body, color: colors.primary, fontWeight: '700' },
+  hint: { ...typography.tiny, color: 'rgba(255,255,255,0.6)', textAlign: 'center', marginTop: -4 },
   erro: { ...typography.small, color: '#ffd0c8', textAlign: 'center' },
   linkBtn: { paddingVertical: spacing.md, alignItems: 'center' },
   linkBtnText: { ...typography.body, color: 'rgba(255,255,255,0.9)', fontWeight: '600' },
