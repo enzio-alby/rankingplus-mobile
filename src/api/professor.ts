@@ -26,9 +26,12 @@ export function getDisciplinasProfessor(profId: number) {
   );
 }
 
-export function getAlunosDaDisciplina(profId: number, discId: number) {
-  return comFallback<local.AlunoDaTurma[]>(
+export async function getAlunosDaDisciplina(profId: number, discId: number) {
+  const rows = await comFallback<local.AlunoDaTurma[]>(
     () => apiFetch(`/professores/${profId}/disciplinas/${discId}/alunos`),
     () => local.alunosDaDisciplina(profId, discId),
   );
+  // O endpoint do web pode devolver o mesmo aluno 2x (2 semestres) — dedup por id.
+  const vistos = new Set<number>();
+  return rows.filter((a) => (vistos.has(a.id) ? false : (vistos.add(a.id), true)));
 }

@@ -54,8 +54,8 @@ function ListaAlunos({ profId, discId }: { profId: number; discId: number }) {
   return (
     <View style={styles.alunos}>
       <Estado carregando={q.isLoading} erro={q.isError ? 'Erro.' : null} vazio={q.data?.length === 0} onRetry={q.refetch} />
-      {q.data?.map((a) => (
-        <View key={a.id} style={styles.aluno}>
+      {q.data?.map((a, i) => (
+        <View key={`${a.id}-${i}`} style={styles.aluno}>
           <View style={{ flex: 1 }}>
             <Text style={styles.alunoNome}>{a.nome}</Text>
             <Text style={styles.alunoSub}>{a.matricula ?? '—'} · {Math.round(a.frequencia)}% freq.</Text>

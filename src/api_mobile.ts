@@ -188,6 +188,8 @@ export type AlunoDaTurma = {
 };
 
 export function alunosDaDisciplina(profId: number, discId: number) {
+  // Um aluno pode ter >1 linha de boletim na mesma disciplina (semestres
+  // diferentes) — pega só a mais recente (maior id) pra não duplicar na lista.
   return all<AlunoDaTurma>(
     `SELECT a.id, a.nome, a.matricula, b.mencao, b.faltas,
             CAST(b.nota_avaliacao AS REAL) AS nota_avaliacao,
@@ -197,6 +199,10 @@ export function alunosDaDisciplina(profId: number, discId: number) {
        JOIN alunos a ON b.aluno_id = a.id
        JOIN disciplinas d ON b.disciplina_id = d.id
       WHERE b.disciplina_id = ? AND d.professor_id = ?
+        AND b.id = (
+          SELECT MAX(b2.id) FROM boletim b2
+           WHERE b2.aluno_id = a.id AND b2.disciplina_id = b.disciplina_id
+        )
       ORDER BY b.mencao ASC, a.nome ASC`, [discId, profId],
   );
 }
