@@ -31,7 +31,14 @@ export function ChatScreen() {
       {q.data?.map((c) => (
         <Pressable
           key={c.id}
-          onPress={() => nav.navigate('Conversa', { conversaId: c.id, nome: c.outro_nome })}
+          onPress={() =>
+            nav.navigate('Conversa', {
+              conversaId: c.id,
+              nome: c.outro_nome,
+              outroTipo: c.outro_tipo,
+              outroId: c.outro_id,
+            })
+          }
         >
           <Card>
             <View style={styles.linha}>

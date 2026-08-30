@@ -17,7 +17,7 @@ const TalentosReadonly = () => <TalentosScreen readonly />;
 import { EmpVagasScreen } from '@/screens/empresa/VagasScreen';
 import { ContratacoesScreen } from '@/screens/empresa/ContratacoesScreen';
 import { ChatScreen } from '@/screens/ChatScreen';
-import { SinoHeader } from '@/components/SinoHeader';
+import { HeaderAcoes } from '@/components/HeaderAcoes';
 import { colors } from '@/theme/tokens';
 
 const Tab = createBottomTabNavigator();
@@ -62,7 +62,7 @@ export function RoleTabs({ papel }: { papel: Papel }) {
         headerStyle: { backgroundColor: colors.primary },
         headerTitleStyle: { color: '#fff', fontSize: 17, fontWeight: '700' },
         headerTintColor: '#fff',
-        headerRight: () => <SinoHeader />,
+        headerRight: () => <HeaderAcoes />,
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textMuted,
         tabBarStyle: { borderTopColor: colors.border },

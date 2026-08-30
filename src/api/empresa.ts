@@ -54,6 +54,32 @@ export function getVagasEmpresa(empresaId: number) {
   );
 }
 
+/** Vagas da empresa em que o aluno tem interesse (pra mostrar no topo do chat). */
+export function getVagasDeInteresse(empresaId: number, alunoId: number) {
+  return comFallback<{ id: number; titulo: string }[]>(
+    async () => {
+      // Sem rota direta no backend — varre as vagas da empresa (até 15) e checa
+      // os interessados de cada uma.
+      const vagas = await getVagasEmpresa(empresaId).catch(() => []);
+      const out: { id: number; titulo: string }[] = [];
+      for (const v of vagas.slice(0, 15)) {
+        try {
+          const inter = await apiFetch<{ id: number }[]>(
+            `/empresas/${empresaId}/vagas/${v.id}/interessados`,
+          );
+          if (Array.isArray(inter) && inter.some((x) => Number(x.id) === alunoId)) {
+            out.push({ id: v.id, titulo: v.titulo });
+          }
+        } catch {
+          /* ignora vaga que falhar */
+        }
+      }
+      return out;
+    },
+    () => local.vagasDeInteresse(empresaId, alunoId),
+  );
+}
+
 export function getContratacoes(empresaId: number) {
   return comFallback<local.Contratacao[]>(
     async () => {

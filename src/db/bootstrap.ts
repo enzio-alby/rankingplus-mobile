@@ -63,9 +63,19 @@ async function _semearChatDemo(modo: Papel) {
       );
     }
   } else if (modo === 'empresa') {
-    const a = await first<{ id: number; nome: string }>(
-      'SELECT id, nome FROM alunos WHERE COALESCE(permitir_exibicao_ranking,1)=1 ORDER BY id LIMIT 1',
-    );
+    const refId = REF_DEMO.empresa;
+    // aluno que tem interesse em alguma vaga desta empresa (pra a conversa fazer sentido)
+    const a =
+      (await first<{ id: number; nome: string }>(
+        `SELECT a.id, a.nome FROM alunos a
+           JOIN vaga_interesses vi ON vi.aluno_id = a.id
+           JOIN empresa_vagas v ON v.id = vi.vaga_id
+          WHERE v.empresa_id = ? LIMIT 1`,
+        [refId],
+      )) ??
+      (await first<{ id: number; nome: string }>(
+        'SELECT id, nome FROM alunos WHERE COALESCE(permitir_exibicao_ranking,1)=1 ORDER BY id LIMIT 1',
+      ));
     if (a) {
       const c = await run(
         "INSERT INTO chat_conversas (outro_tipo, outro_id, outro_nome, criado_em) VALUES ('aluno', ?, ?, ?)",
@@ -75,6 +85,22 @@ async function _semearChatDemo(modo: Papel) {
         "INSERT INTO chat_mensagens (conversa_id, remetente_tipo, remetente_id, texto_cifrado, criado_em) VALUES (?, 'aluno', ?, ?, ?)",
         [c.lastInsertRowId, a.id, 'Tenho interesse na vaga! Quando podemos conversar? 🙂', agora],
       );
+      // notificação de match apontando pra essa conversa, com o NOME do aluno
+      try {
+        await run(
+          `INSERT INTO notificacoes (destinatario_tipo, destinatario_id, tipo, titulo, mensagem, referencia_id, lida, criado_em)
+           VALUES ('empresa', ?, 'match_vaga', ?, ?, ?, 0, ?)`,
+          [
+            refId,
+            'Interesse mútuo em uma vaga',
+            `${a.nome} demonstrou interesse e quer conversar sobre uma vaga.`,
+            c.lastInsertRowId,
+            agora,
+          ],
+        );
+      } catch {
+        /* tabela notificacoes pode não existir no seed antigo */
+      }
     }
   }
 }

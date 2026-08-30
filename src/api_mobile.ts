@@ -861,6 +861,18 @@ export type VagaEmpresa = {
   interessados: number;
 };
 
+/** Vagas desta empresa em que o aluno demonstrou interesse (pode ser >1). */
+export function vagasDeInteresse(empresaId: number, alunoId: number) {
+  return all<{ id: number; titulo: string }>(
+    `SELECT v.id, v.titulo
+       FROM vaga_interesses vi
+       JOIN empresa_vagas v ON v.id = vi.vaga_id
+      WHERE vi.aluno_id = ? AND v.empresa_id = ?
+      ORDER BY v.criado_em DESC`,
+    [alunoId, empresaId],
+  );
+}
+
 export function vagasDaEmpresa(empresaId: number) {
   return all<VagaEmpresa>(
     `SELECT v.id, v.titulo, v.descricao, v.curso_preferido, v.semestre_minimo, v.status,

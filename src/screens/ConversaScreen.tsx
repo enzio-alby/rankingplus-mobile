@@ -8,6 +8,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/navigation/types';
 import { useSession } from '@/auth/session';
 import { getMensagens, enviarMensagem, type Mensagem } from '@/api/chat';
+import { getVagasDeInteresse } from '@/api/empresa';
 import { Estado } from '@/components/ui';
 import { colors, spacing, radius, typography } from '@/theme/tokens';
 
@@ -24,7 +25,7 @@ const EMOJIS = ['👍', '🙂', '🙏', '🎯', '✅', '🚀', '📅', '❓'];
 export function ConversaScreen({ route }: Props) {
   const { sessao } = useSession();
   const qc = useQueryClient();
-  const { conversaId } = route.params;
+  const { conversaId, outroTipo, outroId } = route.params;
   const [texto, setTexto] = useState('');
   const listRef = useRef<FlatList<Mensagem>>(null);
 
@@ -32,6 +33,14 @@ export function ConversaScreen({ route }: Props) {
     queryKey: ['mensagens', conversaId],
     queryFn: () => getMensagens(conversaId),
     refetchInterval: 5000,
+  });
+
+  // Empresa conversando com aluno: mostra em qual(is) vaga(s) o aluno tem interesse.
+  const empChat = sessao?.tipo === 'empresa' && outroTipo === 'aluno' && !!outroId;
+  const vagas = useQuery({
+    queryKey: ['conversa-vagas', sessao?.id, outroId],
+    queryFn: () => getVagasDeInteresse(sessao!.id, outroId as number),
+    enabled: empChat,
   });
 
   const enviar = useMutation({
@@ -59,6 +68,15 @@ export function ConversaScreen({ route }: Props) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={90}
     >
+      {empChat && vagas.data && vagas.data.length > 0 && (
+        <View style={styles.vagaBanner}>
+          <Text style={styles.vagaLbl}>
+            Interesse {vagas.data.length > 1 ? 'nas vagas' : 'na vaga'}:
+          </Text>
+          <Text style={styles.vagaTxt}>{vagas.data.map((v) => v.titulo).join(' · ')}</Text>
+        </View>
+      )}
+
       {q.isLoading ? (
         <Estado carregando />
       ) : (
@@ -121,6 +139,15 @@ export function ConversaScreen({ route }: Props) {
 
 const styles = StyleSheet.create({
   fill: { flex: 1, backgroundColor: colors.bgMuted },
+  vagaBanner: {
+    backgroundColor: colors.accent + '18',
+    borderLeftWidth: 3,
+    borderLeftColor: colors.accent,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  vagaLbl: { ...typography.tiny, color: colors.textMuted, fontWeight: '700', textTransform: 'uppercase' },
+  vagaTxt: { ...typography.small, color: colors.text, marginTop: 2 },
   lista: { padding: spacing.lg, gap: spacing.sm },
   vazio: { ...typography.body, color: colors.textMuted, textAlign: 'center', marginTop: spacing.xxl },
   bolha: { maxWidth: '80%', borderRadius: radius.lg, paddingVertical: spacing.sm, paddingHorizontal: spacing.md },

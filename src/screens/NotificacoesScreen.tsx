@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigation } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSession } from '@/auth/session';
 import { getNotificacoes, marcarLida, marcarTodasLidas } from '@/api/notificacoes';
@@ -24,8 +25,11 @@ function quando(iso: string) {
   return d.toLocaleDateString('pt-BR');
 }
 
+const TIPO_CONVERSA = ['nova_mensagem', 'match_vaga'];
+
 export function NotificacoesScreen() {
   const { sessao } = useSession();
+  const nav = useNavigation<any>();
   const qc = useQueryClient();
   const tipo = sessao!.tipo;
   const id = sessao!.id;
@@ -41,6 +45,13 @@ export function NotificacoesScreen() {
   }
   const lerUma = useMutation({ mutationFn: (nid: number) => marcarLida(tipo, id, nid), onSuccess: invalidar });
   const lerTodas = useMutation({ mutationFn: () => marcarTodasLidas(tipo, id), onSuccess: invalidar });
+
+  function abrir(n: { id: number; tipo: string; titulo: string; referencia_id: number | null; lida: number }) {
+    if (!Number(n.lida)) lerUma.mutate(n.id);
+    if (TIPO_CONVERSA.includes(n.tipo) && n.referencia_id) {
+      nav.navigate('Conversa', { conversaId: n.referencia_id, nome: n.titulo });
+    }
+  }
 
   const temNaoLida = (q.data ?? []).some((n) => !Number(n.lida));
 
@@ -62,8 +73,9 @@ export function NotificacoesScreen() {
 
       {q.data?.map((n) => {
         const lida = !!Number(n.lida);
+        const abreConversa = TIPO_CONVERSA.includes(n.tipo) && !!n.referencia_id;
         return (
-          <Pressable key={n.id} onPress={() => !lida && lerUma.mutate(n.id)}>
+          <Pressable key={n.id} onPress={() => abrir(n)}>
             <Card style={lida ? undefined : styles.naoLida}>
               <View style={styles.linha}>
                 <View style={[styles.icon, !lida && { backgroundColor: colors.accent + '22' }]}>
@@ -76,7 +88,10 @@ export function NotificacoesScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.titulo, !lida && { fontWeight: '700' }]}>{n.titulo}</Text>
                   <Text style={styles.msg}>{n.mensagem}</Text>
-                  <Text style={styles.quando}>{quando(n.criado_em)}</Text>
+                  <Text style={styles.quando}>
+                    {quando(n.criado_em)}
+                    {abreConversa ? '  ·  abrir conversa →' : ''}
+                  </Text>
                 </View>
                 {!lida && <View style={styles.dot} />}
               </View>

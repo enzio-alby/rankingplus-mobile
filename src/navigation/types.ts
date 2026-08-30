@@ -22,7 +22,12 @@ export type RootStackParamList = {
       atividades_entregues: number | null;
     };
   };
-  Conversa: { conversaId: number; nome: string };
+  Conversa: {
+    conversaId: number;
+    nome: string;
+    outroTipo?: string;
+    outroId?: number;
+  };
   Notificacoes: undefined;
   Relatorios: undefined;
   Talentos: undefined;
