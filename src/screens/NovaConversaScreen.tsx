@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TextInput, Pressable, ActivityIndicator, Alert } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import { useSession } from '@/auth/session';
 import { getContatos, abrirConversa, type Contato } from '@/api/chat';
@@ -14,6 +14,7 @@ type Item = Contato & { tipo: Papel };
 export function NovaConversaScreen() {
   const { sessao } = useSession();
   const nav = useNavigation<any>();
+  const qc = useQueryClient();
   const meuTipo = sessao!.tipo;
   const meuId = sessao!.id;
   const [busca, setBusca] = useState('');
@@ -26,6 +27,7 @@ export function NovaConversaScreen() {
   const abrir = useMutation({
     mutationFn: (c: Item) => abrirConversa(meuTipo, meuId, c.tipo, c.id, c.nome),
     onSuccess: (r, c) => {
+      qc.invalidateQueries({ queryKey: ['conversas'] });
       nav.replace('Conversa', {
         conversaId: r.conversa_id,
         nome: c.nome,
