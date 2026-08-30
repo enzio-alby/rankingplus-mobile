@@ -28,12 +28,25 @@ async function lerDemoAtivo(): Promise<DemoAtivo | null> {
 }
 
 async function limparChatLocal() {
-  await run('DELETE FROM chat_mensagens');
-  await run('DELETE FROM chat_conversas');
+  try {
+    await run('DELETE FROM chat_mensagens');
+    await run('DELETE FROM chat_conversas');
+  } catch {
+    /* tabelas ainda não existem — ignora */
+  }
 }
 
-/** Chat de exemplo pro modo demo não abrir vazio. */
+/** Chat de exemplo pro modo demo não abrir vazio. Nunca deve bloquear o login:
+ *  se algo falhar, o demo entra mesmo assim, só sem a conversa de exemplo. */
 async function semearChatDemo(modo: Papel) {
+  try {
+    await _semearChatDemo(modo);
+  } catch (e) {
+    console.warn('[chat] semearChatDemo falhou (ignorado):', e);
+  }
+}
+
+async function _semearChatDemo(modo: Papel) {
   await limparChatLocal();
   const cifrar = (t: string) => CryptoJS.AES.encrypt(t, SEED_KEY).toString();
   if (modo === 'aluno') {

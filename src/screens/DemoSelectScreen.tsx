@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -37,6 +37,12 @@ export function DemoSelectScreen({ route }: Props) {
     try {
       const sessao = await iniciarDemoLocal(modo, nomeGoogle);
       await entrar(sessao);
+    } catch (e) {
+      console.warn('[demo] iniciarDemoLocal falhou:', e);
+      Alert.alert(
+        'Não foi possível abrir a demonstração',
+        e instanceof Error ? e.message : 'Tente de novo.',
+      );
     } finally {
       setCarregando(null);
     }

@@ -9,18 +9,15 @@ export async function getDb(): Promise<SQLite.SQLiteDatabase> {
   _db = await SQLite.openDatabaseAsync(DB_NAME);
   await _db.execAsync(
     `CREATE TABLE IF NOT EXISTS _meta (chave TEXT PRIMARY KEY, valor TEXT);
-     CREATE TABLE IF NOT EXISTS _demo_rows (tabela TEXT, row_id INTEGER);
-     -- Chat LOCAL (só modo demo — no online usa as rotas /chat do backend).
-     CREATE TABLE IF NOT EXISTS chat_conversas (
-       id INTEGER PRIMARY KEY AUTOINCREMENT,
-       outro_tipo TEXT, outro_id INTEGER, outro_nome TEXT,
-       criado_em TEXT
-     );
-     CREATE TABLE IF NOT EXISTS chat_mensagens (
-       id INTEGER PRIMARY KEY AUTOINCREMENT,
-       conversa_id INTEGER, remetente_tipo TEXT, remetente_id INTEGER,
-       texto_cifrado TEXT, criado_em TEXT
-     );`,
+     CREATE TABLE IF NOT EXISTS _demo_rows (tabela TEXT, row_id INTEGER);`,
+  );
+  // Chat LOCAL (só modo demo — no online usa as rotas /chat do backend).
+  // execAsync separado, sem comentário SQL no meio (mais seguro entre versões).
+  await _db.execAsync(
+    'CREATE TABLE IF NOT EXISTS chat_conversas (id INTEGER PRIMARY KEY AUTOINCREMENT, outro_tipo TEXT, outro_id INTEGER, outro_nome TEXT, criado_em TEXT)',
+  );
+  await _db.execAsync(
+    'CREATE TABLE IF NOT EXISTS chat_mensagens (id INTEGER PRIMARY KEY AUTOINCREMENT, conversa_id INTEGER, remetente_tipo TEXT, remetente_id INTEGER, texto_cifrado TEXT, criado_em TEXT)',
   );
   return _db;
 }
