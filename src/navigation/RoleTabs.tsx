@@ -16,6 +16,7 @@ import { FavoritosScreen } from '@/screens/empresa/FavoritosScreen';
 const TalentosReadonly = () => <TalentosScreen readonly />;
 import { EmpVagasScreen } from '@/screens/empresa/VagasScreen';
 import { ContratacoesScreen } from '@/screens/empresa/ContratacoesScreen';
+import { EmpPerfilScreen } from '@/screens/empresa/PerfilScreen';
 import { ChatScreen } from '@/screens/ChatScreen';
 import { HeaderAcoes } from '@/components/HeaderAcoes';
 import { colors } from '@/theme/tokens';
@@ -51,6 +52,7 @@ const TABS: Record<Papel, TabDef[]> = {
     { name: 'EmpVagas', titulo: 'Vagas', icon: 'briefcase', component: EmpVagasScreen },
     { name: 'EmpContratacoes', titulo: 'Contratações', icon: 'ribbon', component: ContratacoesScreen },
     { name: 'EmpMensagens', titulo: 'Chat', icon: 'chatbubbles', component: ChatScreen },
+    { name: 'EmpPerfil', titulo: 'Perfil', icon: 'person', component: EmpPerfilScreen },
   ],
 };
 

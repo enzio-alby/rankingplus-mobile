@@ -69,6 +69,43 @@ export function getTiposVaga() {
   );
 }
 
+// ─── Interesses de Perfil (o que a empresa busca) ─────────────────────────
+export function getInteressesEmpresa(empresaId: number) {
+  return comFallback<local.InteressesEmpresa>(
+    async () => {
+      const e = await apiFetch<{
+        interesses?: {
+          area_foco_id?: number | null;
+          tipo_vaga_id?: number | null;
+          area_foco_nome?: string | null;
+          tipo_vaga_nome?: string | null;
+          curso_preferido?: string | null;
+          semestre_minimo?: number | null;
+        }[];
+        perfis_procurados?: string[];
+      }>(`/empresas/${empresaId}`);
+      const i = e.interesses?.[0] ?? {};
+      return {
+        area_foco_id: i.area_foco_id ?? null,
+        tipo_vaga_id: i.tipo_vaga_id ?? null,
+        area_foco_nome: i.area_foco_nome ?? null,
+        tipo_vaga_nome: i.tipo_vaga_nome ?? null,
+        curso_preferido: i.curso_preferido ?? null,
+        semestre_minimo: i.semestre_minimo ?? null,
+        perfis_procurados: e.perfis_procurados ?? [],
+      };
+    },
+    () => local.interessesEmpresa(empresaId),
+  );
+}
+
+export function salvarInteressesEmpresa(empresaId: number, campos: local.CamposInteresses) {
+  return comFallback<unknown>(
+    () => apiFetch(`/empresas/${empresaId}/interesses`, { method: 'PUT', body: campos }),
+    () => local.salvarInteressesEmpresa(empresaId, campos),
+  );
+}
+
 export function criarVaga(empresaId: number, campos: local.CamposVaga) {
   return comFallback<{ id: number }>(
     () => apiFetch(`/empresas/${empresaId}/vagas`, { method: 'POST', body: campos }),

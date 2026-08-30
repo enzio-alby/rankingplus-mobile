@@ -923,6 +923,96 @@ export function vagasDeInteresse(empresaId: number, alunoId: number) {
   );
 }
 
+// ─── EMPRESA — INTERESSES DE PERFIL ──────────────────────────────────────
+export const PERFIS_COMPORTAMENTAIS = ['executor', 'comunicador', 'planejador', 'analista'] as const;
+export type PerfilComportamental = (typeof PERFIS_COMPORTAMENTAIS)[number];
+
+export type InteressesEmpresa = {
+  area_foco_id: number | null;
+  tipo_vaga_id: number | null;
+  area_foco_nome: string | null;
+  tipo_vaga_nome: string | null;
+  curso_preferido: string | null;
+  semestre_minimo: number | null;
+  perfis_procurados: string[];
+};
+
+export type CamposInteresses = {
+  area_foco_id: number | null;
+  tipo_vaga_id: number | null;
+  curso_preferido: string | null;
+  semestre_minimo: number | null;
+  perfis_procurados: string[];
+};
+
+export async function interessesEmpresa(empresaId: number): Promise<InteressesEmpresa> {
+  const ei = await first<{
+    area_foco_id: number | null;
+    tipo_vaga_id: number | null;
+    area_foco_nome: string | null;
+    tipo_vaga_nome: string | null;
+    curso_preferido: string | null;
+    semestre_minimo: number | null;
+  }>(
+    `SELECT ei.area_foco_id, ei.tipo_vaga_id, ei.curso_preferido, ei.semestre_minimo,
+            af.nome AS area_foco_nome, tv.nome AS tipo_vaga_nome
+       FROM empresa_interesses ei
+       LEFT JOIN dom_areas_foco af ON af.id = ei.area_foco_id
+       LEFT JOIN dom_tipos_vaga tv ON tv.id = ei.tipo_vaga_id
+      WHERE ei.empresa_id = ? LIMIT 1`,
+    [empresaId],
+  );
+  const perfis = (
+    await all<{ perfil: string }>(
+      'SELECT perfil FROM empresa_perfis_procurados WHERE empresa_id = ? ORDER BY ordem',
+      [empresaId],
+    )
+  ).map((r) => r.perfil);
+  return {
+    area_foco_id: ei?.area_foco_id ?? null,
+    tipo_vaga_id: ei?.tipo_vaga_id ?? null,
+    area_foco_nome: ei?.area_foco_nome ?? null,
+    tipo_vaga_nome: ei?.tipo_vaga_nome ?? null,
+    curso_preferido: ei?.curso_preferido ?? null,
+    semestre_minimo: ei?.semestre_minimo ?? null,
+    perfis_procurados: perfis,
+  };
+}
+
+export async function salvarInteressesEmpresa(
+  empresaId: number,
+  c: CamposInteresses,
+): Promise<void> {
+  await run(
+    'CREATE TABLE IF NOT EXISTS empresa_perfis_procurados (empresa_id INTEGER, perfil TEXT, ordem INTEGER)',
+  );
+  await tx(async () => {
+    await run('DELETE FROM empresa_interesses WHERE empresa_id = ?', [empresaId]);
+    await run(
+      `INSERT INTO empresa_interesses (empresa_id, area_foco_id, tipo_vaga_id, curso_preferido, semestre_minimo)
+       VALUES (?, ?, ?, ?, ?)`,
+      [
+        empresaId,
+        nulo(c.area_foco_id),
+        nulo(c.tipo_vaga_id),
+        nulo(c.curso_preferido),
+        nulo(c.semestre_minimo) ?? 1,
+      ],
+    );
+    await run('DELETE FROM empresa_perfis_procurados WHERE empresa_id = ?', [empresaId]);
+    const escolhidos = (c.perfis_procurados ?? [])
+      .filter((p) => (PERFIS_COMPORTAMENTAIS as readonly string[]).includes(p))
+      .slice(0, 2);
+    for (let i = 0; i < escolhidos.length; i++) {
+      await run('INSERT INTO empresa_perfis_procurados (empresa_id, perfil, ordem) VALUES (?, ?, ?)', [
+        empresaId,
+        escolhidos[i],
+        i + 1,
+      ]);
+    }
+  });
+}
+
 export function vagasDaEmpresa(empresaId: number) {
   return all<VagaEmpresa>(
     `SELECT v.id, v.titulo, v.descricao, v.curso_preferido, v.semestre_minimo, v.status,
