@@ -2,7 +2,6 @@ import React, { type ReactNode } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, ActivityIndicator, RefreshControl, Pressable,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, radius, typography } from '@/theme/tokens';
 
 export function ScreenScroll({
@@ -14,13 +13,13 @@ export function ScreenScroll({
   onRefresh?: () => void;
   refreshing?: boolean;
 }) {
-  const insets = useSafeAreaInsets();
+  // As telas de aba já têm o header nativo (com o sino), então aqui só um respiro.
   return (
     <ScrollView
       style={{ backgroundColor: colors.bgMuted }}
       contentContainerStyle={{
         paddingHorizontal: spacing.md,
-        paddingTop: insets.top + spacing.sm,
+        paddingTop: spacing.md,
         paddingBottom: spacing.xxl,
         gap: spacing.sm,
       }}

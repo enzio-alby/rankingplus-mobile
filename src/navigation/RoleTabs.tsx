@@ -15,6 +15,7 @@ import { FavoritosScreen } from '@/screens/empresa/FavoritosScreen';
 import { EmpVagasScreen } from '@/screens/empresa/VagasScreen';
 import { ContratacoesScreen } from '@/screens/empresa/ContratacoesScreen';
 import { ChatScreen } from '@/screens/ChatScreen';
+import { SinoHeader } from '@/components/SinoHeader';
 import { colors } from '@/theme/tokens';
 
 const Tab = createBottomTabNavigator();
@@ -55,9 +56,13 @@ export function RoleTabs({ papel }: { papel: Papel }) {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
-        headerShown: false,
+        headerStyle: { backgroundColor: colors.primary },
+        headerTitleStyle: { color: '#fff', fontSize: 17, fontWeight: '700' },
+        headerTintColor: '#fff',
+        headerRight: () => <SinoHeader />,
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textMuted,
+        tabBarStyle: { borderTopColor: colors.border },
         tabBarIcon: ({ color, size }) => {
           const def = tabs.find((t) => t.name === route.name);
           return <Ionicons name={def?.icon ?? 'ellipse'} size={size} color={color} />;

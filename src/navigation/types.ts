@@ -23,6 +23,7 @@ export type RootStackParamList = {
     };
   };
   Conversa: { conversaId: number; nome: string };
+  Notificacoes: undefined;
   // sempre disponível
   Termos: { origem: 'inicial' | 'app' } | undefined;
 };

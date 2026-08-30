@@ -10,6 +10,7 @@ import { OtpScreen } from '@/screens/OtpScreen';
 import { TermsScreen } from '@/screens/TermsScreen';
 import { EditarLancamentoScreen } from '@/screens/professor/EditarLancamentoScreen';
 import { ConversaScreen } from '@/screens/ConversaScreen';
+import { NotificacoesScreen } from '@/screens/NotificacoesScreen';
 import { RoleTabs } from '@/navigation/RoleTabs';
 import type { RootStackParamList } from '@/navigation/types';
 import { colors } from '@/theme/tokens';
@@ -48,6 +49,11 @@ export function RootNavigator() {
               name="Conversa"
               component={ConversaScreen}
               options={({ route }) => ({ headerShown: true, title: route.params.nome })}
+            />
+            <Stack.Screen
+              name="Notificacoes"
+              component={NotificacoesScreen}
+              options={{ headerShown: true, title: 'Notificações' }}
             />
           </>
         ) : (

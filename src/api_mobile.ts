@@ -857,6 +857,50 @@ export function vagasDaEmpresa(empresaId: number) {
   );
 }
 
+// ─── NOTIFICAÇÕES ────────────────────────────────────────────────────────
+export type Notificacao = {
+  id: number;
+  tipo: string;
+  titulo: string;
+  mensagem: string;
+  referencia_id: number | null;
+  lida: number;
+  criado_em: string;
+};
+
+export function notificacoesLocais(tipo: string, id: number) {
+  return all<Notificacao>(
+    `SELECT id, tipo, titulo, mensagem, referencia_id, lida, criado_em
+       FROM notificacoes
+      WHERE destinatario_tipo = ? AND destinatario_id = ?
+      ORDER BY criado_em DESC
+      LIMIT 60`,
+    [tipo, id],
+  );
+}
+
+export async function contarNaoLidasLocal(tipo: string, id: number): Promise<number> {
+  const r = await first<{ n: number }>(
+    'SELECT COUNT(*) AS n FROM notificacoes WHERE destinatario_tipo = ? AND destinatario_id = ? AND COALESCE(lida,0) = 0',
+    [tipo, id],
+  );
+  return Number(r?.n ?? 0);
+}
+
+export async function marcarLidaLocal(tipo: string, id: number, notifId: number) {
+  await run(
+    'UPDATE notificacoes SET lida = 1 WHERE id = ? AND destinatario_tipo = ? AND destinatario_id = ?',
+    [notifId, tipo, id],
+  );
+}
+
+export async function marcarTodasLidasLocal(tipo: string, id: number) {
+  await run(
+    'UPDATE notificacoes SET lida = 1 WHERE destinatario_tipo = ? AND destinatario_id = ?',
+    [tipo, id],
+  );
+}
+
 // ─── EMPRESA — CONTRATAÇÕES ──────────────────────────────────────────────
 export type Contratacao = {
   aluno_id: number;
