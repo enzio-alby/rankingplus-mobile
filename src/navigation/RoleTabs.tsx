@@ -6,9 +6,11 @@ import { makePlaceholder } from '@/screens/common/PlaceholderScreen';
 import { DashboardScreen } from '@/screens/aluno/DashboardScreen';
 import { BoletimScreen } from '@/screens/aluno/BoletimScreen';
 import { RankingScreen } from '@/screens/aluno/RankingScreen';
+import { MeuPerfilScreen } from '@/screens/aluno/MeuPerfilScreen';
 import { ProfDashboardScreen } from '@/screens/professor/DashboardScreen';
 import { ProfTurmasScreen } from '@/screens/professor/TurmasScreen';
 import { TalentosScreen } from '@/screens/empresa/TalentosScreen';
+import { FavoritosScreen } from '@/screens/empresa/FavoritosScreen';
 import { colors } from '@/theme/tokens';
 
 const Tab = createBottomTabNavigator();
@@ -26,7 +28,7 @@ const TABS: Record<Papel, TabDef[]> = {
     { name: 'AlunoBoletim', titulo: 'Boletim', icon: 'document-text', component: BoletimScreen },
     { name: 'AlunoRanking', titulo: 'Ranking', icon: 'trophy', component: RankingScreen },
     { name: 'AlunoVagas', titulo: 'Vagas', icon: 'briefcase', component: makePlaceholder('Vagas') },
-    { name: 'AlunoPerfil', titulo: 'Perfil', icon: 'person', component: makePlaceholder('Meu Perfil') },
+    { name: 'AlunoPerfil', titulo: 'Perfil', icon: 'person', component: MeuPerfilScreen },
   ],
   professor: [
     { name: 'ProfDashboard', titulo: 'Início', icon: 'home', component: ProfDashboardScreen },
@@ -35,7 +37,7 @@ const TABS: Record<Papel, TabDef[]> = {
   ],
   empresa: [
     { name: 'EmpTalentos', titulo: 'Talentos', icon: 'search', component: TalentosScreen },
-    { name: 'EmpFavoritos', titulo: 'Favoritos', icon: 'star', component: makePlaceholder('Favoritos') },
+    { name: 'EmpFavoritos', titulo: 'Favoritos', icon: 'star', component: FavoritosScreen },
     { name: 'EmpVagas', titulo: 'Vagas', icon: 'briefcase', component: makePlaceholder('Minhas Vagas') },
     { name: 'EmpMensagens', titulo: 'Mensagens', icon: 'chatbubbles', component: makePlaceholder('Mensagens') },
   ],

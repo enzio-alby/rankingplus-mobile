@@ -40,3 +40,60 @@ export function getPerfilCandidato(alunoId: number, empresaId: number) {
     () => local.perfilCandidato(alunoId, empresaId),
   );
 }
+
+// ─── Favoritos / Kanban ────────────────────────────────────────────────────
+export function getFavoritos(empresaId: number) {
+  return comFallback<local.Favorito[]>(
+    async () => {
+      const r = await apiFetch<local.Favorito[] | { favoritos?: local.Favorito[] }>(
+        `/empresas/${empresaId}/favoritos`,
+      );
+      return Array.isArray(r) ? r : (r.favoritos ?? []);
+    },
+    () => local.favoritos(empresaId),
+  );
+}
+
+export function getStatusFavorito(empresaId: number, alunoId: number) {
+  return comFallback<local.StatusFavorito | null>(
+    async () => {
+      const r = await apiFetch<local.Favorito[]>(`/empresas/${empresaId}/favoritos`).catch(() => []);
+      const arr = Array.isArray(r) ? r : [];
+      return arr.find((f) => f.id === alunoId)?.status ?? null;
+    },
+    () => local.statusFavorito(empresaId, alunoId),
+  );
+}
+
+export function favoritar(empresaId: number, alunoId: number) {
+  return comFallback<void>(
+    async () => {
+      await apiFetch(`/empresas/${empresaId}/favoritos`, {
+        method: 'POST',
+        body: { aluno_id: alunoId },
+      });
+    },
+    () => local.favoritar(empresaId, alunoId),
+  );
+}
+
+export function desfavoritar(empresaId: number, alunoId: number) {
+  return comFallback<void>(
+    async () => {
+      await apiFetch(`/empresas/${empresaId}/favoritos/${alunoId}`, { method: 'DELETE' });
+    },
+    () => local.desfavoritar(empresaId, alunoId),
+  );
+}
+
+export function mudarStatusFavorito(empresaId: number, alunoId: number, status: local.StatusFavorito) {
+  return comFallback<void>(
+    async () => {
+      await apiFetch(`/empresas/${empresaId}/favoritos/${alunoId}/status`, {
+        method: 'PUT',
+        body: { status },
+      });
+    },
+    () => local.setStatusFavorito(empresaId, alunoId, status),
+  );
+}

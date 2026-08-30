@@ -33,6 +33,23 @@ export function getStatsDisciplinas(profId: number) {
   );
 }
 
+export function salvarLancamento(
+  profId: number,
+  discId: number,
+  alunoId: number,
+  campos: local.CamposLancamento,
+) {
+  return comFallback<void>(
+    async () => {
+      await apiFetch(`/professores/${profId}/disciplinas/${discId}/alunos/${alunoId}/boletim`, {
+        method: 'PUT',
+        body: campos,
+      });
+    },
+    () => local.atualizarLancamento(profId, discId, alunoId, campos),
+  );
+}
+
 export async function getAlunosDaDisciplina(profId: number, discId: number) {
   const rows = await comFallback<local.AlunoDaTurma[]>(
     () => apiFetch(`/professores/${profId}/disciplinas/${discId}/alunos`),

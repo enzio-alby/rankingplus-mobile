@@ -8,6 +8,7 @@ import { DemoSelectScreen } from '@/screens/DemoSelectScreen';
 import { LoginEmailScreen } from '@/screens/LoginEmailScreen';
 import { OtpScreen } from '@/screens/OtpScreen';
 import { TermsScreen } from '@/screens/TermsScreen';
+import { EditarLancamentoScreen } from '@/screens/professor/EditarLancamentoScreen';
 import { RoleTabs } from '@/navigation/RoleTabs';
 import type { RootStackParamList } from '@/navigation/types';
 import { colors } from '@/theme/tokens';
@@ -35,7 +36,14 @@ export function RootNavigator() {
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {sessao ? (
-          <Stack.Screen name="Main" component={MainTabs} />
+          <>
+            <Stack.Screen name="Main" component={MainTabs} />
+            <Stack.Screen
+              name="EditarLancamento"
+              component={EditarLancamentoScreen}
+              options={{ headerShown: true, title: 'Editar lançamento' }}
+            />
+          </>
         ) : (
           <>
             <Stack.Screen name="Splash" component={SplashScreen} />

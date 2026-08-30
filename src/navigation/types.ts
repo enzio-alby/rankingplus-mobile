@@ -10,6 +10,18 @@ export type RootStackParamList = {
   Otp: { tempToken: string; emailMascarado: string; tipo: Papel };
   // com sessão
   Main: undefined;
+  EditarLancamento: {
+    profId: number;
+    discId: number;
+    alunoId: number;
+    nome: string;
+    atual: {
+      mencao: string | null;
+      faltas: number | null;
+      nota_avaliacao: number | null;
+      atividades_entregues: number | null;
+    };
+  };
   // sempre disponível
   Termos: { origem: 'inicial' | 'app' } | undefined;
 };

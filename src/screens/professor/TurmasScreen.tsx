@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigation } from '@react-navigation/native';
 import { useSession } from '@/auth/session';
 import { getDisciplinasProfessor, getAlunosDaDisciplina } from '@/api/professor';
 import { ScreenScroll, Titulo, Card, Estado } from '@/components/ui';
@@ -47,6 +48,7 @@ export function ProfTurmasScreen() {
 }
 
 function ListaAlunos({ profId, discId }: { profId: number; discId: number }) {
+  const nav = useNavigation<any>();
   const q = useQuery({
     queryKey: ['turma-alunos', profId, discId],
     queryFn: () => getAlunosDaDisciplina(profId, discId),
@@ -55,7 +57,24 @@ function ListaAlunos({ profId, discId }: { profId: number; discId: number }) {
     <View style={styles.alunos}>
       <Estado carregando={q.isLoading} erro={q.isError ? 'Erro.' : null} vazio={q.data?.length === 0} onRetry={q.refetch} />
       {q.data?.map((a, i) => (
-        <View key={`${a.id}-${i}`} style={styles.aluno}>
+        <Pressable
+          key={`${a.id}-${i}`}
+          style={styles.aluno}
+          onPress={() =>
+            nav.navigate('EditarLancamento', {
+              profId,
+              discId,
+              alunoId: a.id,
+              nome: a.nome,
+              atual: {
+                mencao: a.mencao,
+                faltas: a.faltas ?? null,
+                nota_avaliacao: a.nota_avaliacao ?? null,
+                atividades_entregues: a.atividades_entregues ?? null,
+              },
+            })
+          }
+        >
           <View style={{ flex: 1 }}>
             <Text style={styles.alunoNome}>{a.nome}</Text>
             <Text style={styles.alunoSub}>{a.matricula ?? '—'} · {Math.round(a.frequencia)}% freq.</Text>
@@ -68,9 +87,9 @@ function ListaAlunos({ profId, discId }: { profId: number; discId: number }) {
           ) : (
             <Text style={styles.semNota}>—</Text>
           )}
-        </View>
+          <Text style={styles.editar}>✎</Text>
+        </Pressable>
       ))}
-      <Text style={styles.nota}>Edição de lançamento (menção/faltas/nota): próxima etapa.</Text>
     </View>
   );
 }
@@ -88,5 +107,5 @@ const styles = StyleSheet.create({
   badge: { paddingHorizontal: spacing.sm, paddingVertical: 2, borderRadius: radius.sm },
   badgeTxt: { ...typography.small, fontWeight: '800' },
   semNota: { color: colors.textMuted, width: 30, textAlign: 'center' },
-  nota: { ...typography.tiny, color: colors.textMuted, fontStyle: 'italic', marginTop: spacing.sm },
+  editar: { color: colors.textMuted, fontSize: 14, marginLeft: 4 },
 });

@@ -1,19 +1,29 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, Modal, ScrollView } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
+import { View, Text, StyleSheet, Pressable, Modal, ScrollView, Alert } from 'react-native';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSession } from '@/auth/session';
-import { getTalentos, getPerfilCandidato } from '@/api/empresa';
+import {
+  getTalentos, getPerfilCandidato, getStatusFavorito, favoritar, desfavoritar, mudarStatusFavorito,
+} from '@/api/empresa';
 import { getDesempenho, getFiltros } from '@/api/aluno';
 import { ScreenScroll, Titulo, Card, Estado, StatTile } from '@/components/ui';
 import { LinhaChart } from '@/components/chart';
 import { FiltroBar, SelectPill } from '@/components/filtro';
 import { colors, spacing, radius, typography } from '@/theme/tokens';
-import type { Compatibilidade } from '@/api_mobile';
+import { STATUS_FAVORITO, type Compatibilidade, type StatusFavorito } from '@/api_mobile';
 
 function corFaixa(f?: string) {
   return f === 'alta' ? colors.compatAlta : f === 'media' ? colors.compatMedia : colors.compatBaixa;
 }
+
+const ROTULO_STATUS: Record<StatusFavorito, string> = {
+  novo: 'Novo',
+  contatado: 'Contatado',
+  entrevista_marcada: 'Entrevista',
+  contratado: 'Contratado',
+  descartado: 'Descartado',
+};
 
 const CRA_OPCOES = [
   { label: 'CRA mín.', value: null },
@@ -147,6 +157,7 @@ function CandidatoModal({
   onClose: () => void;
 }) {
   const insets = useSafeAreaInsets();
+  const qc = useQueryClient();
   const q = useQuery({
     queryKey: ['candidato', alunoId, empresaId],
     queryFn: () => getPerfilCandidato(alunoId as number, empresaId),
@@ -157,7 +168,27 @@ function CandidatoModal({
     queryFn: () => getDesempenho(alunoId as number),
     enabled: alunoId != null,
   });
+  const favStatus = useQuery({
+    queryKey: ['status-fav', empresaId, alunoId],
+    queryFn: () => getStatusFavorito(empresaId, alunoId as number),
+    enabled: alunoId != null,
+  });
   const d = q.data;
+
+  function invalidarFav() {
+    qc.invalidateQueries({ queryKey: ['status-fav', empresaId, alunoId] });
+    qc.invalidateQueries({ queryKey: ['favoritos', empresaId] });
+  }
+  const favBtn = useMutation({
+    mutationFn: () =>
+      favStatus.data ? desfavoritar(empresaId, alunoId as number) : favoritar(empresaId, alunoId as number),
+    onSuccess: invalidarFav,
+    onError: () => Alert.alert('Erro', 'Não foi possível atualizar o favorito.'),
+  });
+  const statusMut = useMutation({
+    mutationFn: (s: StatusFavorito) => mudarStatusFavorito(empresaId, alunoId as number, s),
+    onSuccess: invalidarFav,
+  });
 
   return (
     <Modal visible={alunoId != null} animationType="slide" onRequestClose={onClose}>
@@ -174,6 +205,33 @@ function CandidatoModal({
             <Text style={styles.sub}>
               {[d.curso, d.semestre ? `${d.semestre}º sem.` : null].filter(Boolean).join(' · ')}
             </Text>
+
+            <View style={styles.favRow}>
+              <Pressable
+                style={[styles.favBtn, favStatus.data && styles.favBtnOn]}
+                onPress={() => favBtn.mutate()}
+                disabled={favBtn.isPending}
+              >
+                <Text style={[styles.favBtnTxt, favStatus.data && styles.favBtnTxtOn]}>
+                  {favStatus.data ? '★ Favoritado' : '☆ Favoritar'}
+                </Text>
+              </Pressable>
+            </View>
+            {favStatus.data && (
+              <View style={styles.statusRow}>
+                {STATUS_FAVORITO.filter((s) => s !== 'descartado').map((s) => (
+                  <Pressable
+                    key={s}
+                    style={[styles.stBtn, favStatus.data === s && styles.stBtnOn]}
+                    onPress={() => statusMut.mutate(s)}
+                  >
+                    <Text style={[styles.stTxt, favStatus.data === s && styles.stTxtOn]}>
+                      {ROTULO_STATUS[s]}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
 
             {d.compatibilidade && <CompatCard c={d.compatibilidade} />}
 
@@ -214,7 +272,7 @@ function CandidatoModal({
                 ))
               )}
             </Card>
-            <Text style={styles.nota}>Favoritar / status / mensagens: próxima etapa.</Text>
+            <Text style={styles.nota}>Mensagens (chat por match): próxima etapa.</Text>
           </>
         )}
       </ScrollView>
@@ -249,6 +307,22 @@ const styles = StyleSheet.create({
   limpar: { borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 7, justifyContent: 'center' },
   limparTxt: { ...typography.small, color: colors.danger, fontWeight: '600' },
   sub: { ...typography.small, color: colors.textMuted, marginTop: 2 },
+  favRow: { flexDirection: 'row' },
+  favBtn: {
+    flex: 1, borderWidth: 1, borderColor: colors.accent, borderRadius: radius.md,
+    paddingVertical: spacing.md, alignItems: 'center',
+  },
+  favBtnOn: { backgroundColor: colors.accent },
+  favBtnTxt: { ...typography.body, color: colors.accent, fontWeight: '700' },
+  favBtnTxtOn: { color: '#fff' },
+  statusRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  stBtn: {
+    borderWidth: 1, borderColor: colors.border, borderRadius: radius.pill,
+    paddingVertical: 5, paddingHorizontal: spacing.md,
+  },
+  stBtnOn: { backgroundColor: colors.primary, borderColor: colors.primary },
+  stTxt: { ...typography.small, color: colors.text },
+  stTxtOn: { color: '#fff', fontWeight: '700' },
   linha: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   nome: { ...typography.h3, color: colors.text },
   dir: { alignItems: 'flex-end', gap: 4 },

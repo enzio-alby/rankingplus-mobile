@@ -27,6 +27,36 @@ export function getBoletim(alunoId: number) {
   );
 }
 
+// ─── Meu Perfil (ver + editar) ─────────────────────────────────────────────
+export function getMeuPerfil(alunoId: number) {
+  return comFallback<local.MeuPerfil | null>(
+    async () => {
+      const a = await apiFetch<Record<string, unknown>>(`/alunos/${alunoId}`);
+      return {
+        id: Number(a.id),
+        nome: (a.nome as string) ?? null,
+        email: (a.email as string) ?? null,
+        telefone: (a.telefone as string) ?? null,
+        github: (a.github as string) ?? null,
+        linkedin: (a.linkedin as string) ?? null,
+        curso: (a.curso as string) ?? null,
+        semestre_atual: (a.semestre_atual as number) ?? null,
+        permitir_exibicao_ranking: Number(a.permitir_exibicao_ranking ?? 1),
+      };
+    },
+    () => local.meuPerfil(alunoId),
+  );
+}
+
+export function salvarMeuPerfil(alunoId: number, campos: local.CamposPerfilAluno) {
+  return comFallback<void>(
+    async () => {
+      await apiFetch(`/alunos/${alunoId}`, { method: 'PUT', body: campos });
+    },
+    () => local.atualizarPerfilAluno(alunoId, campos),
+  );
+}
+
 // ─── Desempenho por semestre (gráfico) ─────────────────────────────────────
 export function getDesempenho(alunoId: number) {
   return comFallback<local.SerieDesempenho>(

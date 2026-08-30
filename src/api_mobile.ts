@@ -6,7 +6,7 @@
  * Regra de ouro: MESMA regra do backend (escala de menção, anonimização LGPD,
  * fórmula de frequência) — se divergir, o app mostra número diferente do site.
  */
-import { all, first } from '@/db/local';
+import { all, first, run } from '@/db/local';
 
 /** Escala oficial menção→nota (igual `mencaoParaNotaSQL` do api2.js). */
 const NOTA = (col: string) =>
@@ -558,4 +558,157 @@ export async function perfilCandidato(
     disciplinas_destaque: destaque,
     compatibilidade: compat,
   };
+}
+
+// ═══════════════ ESCRITA (edição) — modo demo grava no SQLite local ═══════════
+// No demo, essas alterações são zeradas ao sair (aplicarSeed(force)).
+
+// ─── PROFESSOR — editar lançamento ─────────────────────────────────────────
+export type CamposLancamento = Partial<{
+  mencao: string;
+  faltas: number;
+  nota_avaliacao: number | null;
+  atividades_entregues: number;
+  participacao_nota: number | null;
+}>;
+
+export async function atualizarLancamento(
+  profId: number,
+  discId: number,
+  alunoId: number,
+  campos: CamposLancamento,
+): Promise<void> {
+  const permitido: (keyof CamposLancamento)[] = [
+    'mencao', 'faltas', 'nota_avaliacao', 'atividades_entregues', 'participacao_nota',
+  ];
+  const sets: string[] = [];
+  const vals: (string | number | null)[] = [];
+  for (const f of permitido) {
+    if (f in campos) {
+      const v = campos[f];
+      sets.push(`${f} = ?`);
+      vals.push(v === undefined || v === ('' as unknown) ? null : (v as string | number));
+    }
+  }
+  if (!sets.length) return;
+
+  const bl = await first<{ id: number }>(
+    `SELECT b.id FROM boletim b JOIN disciplinas d ON b.disciplina_id = d.id
+      WHERE b.aluno_id = ? AND b.disciplina_id = ? AND d.professor_id = ?
+      ORDER BY b.id DESC LIMIT 1`,
+    [alunoId, discId, profId],
+  );
+  if (!bl) throw new Error('Lançamento não encontrado.');
+  vals.push(bl.id);
+  await run(`UPDATE boletim SET ${sets.join(', ')} WHERE id = ?`, vals);
+}
+
+// ─── ALUNO — Meu Perfil ───────────────────────────────────────────────────
+export type MeuPerfil = {
+  id: number;
+  nome: string | null;
+  email: string | null;
+  telefone: string | null;
+  github: string | null;
+  linkedin: string | null;
+  curso: string | null;
+  semestre_atual: number | null;
+  permitir_exibicao_ranking: number;
+};
+
+export function meuPerfil(alunoId: number) {
+  return first<MeuPerfil>(
+    `SELECT id, nome, email, telefone, github, linkedin, curso, semestre_atual,
+            COALESCE(permitir_exibicao_ranking, 1) AS permitir_exibicao_ranking
+       FROM alunos WHERE id = ?`,
+    [alunoId],
+  );
+}
+
+export type CamposPerfilAluno = Partial<{
+  nome: string;
+  telefone: string | null;
+  github: string | null;
+  linkedin: string | null;
+  permitir_exibicao_ranking: number;
+}>;
+
+export async function atualizarPerfilAluno(alunoId: number, campos: CamposPerfilAluno): Promise<void> {
+  const permitido: (keyof CamposPerfilAluno)[] = ['nome', 'telefone', 'github', 'linkedin', 'permitir_exibicao_ranking'];
+  const sets: string[] = [];
+  const vals: (string | number | null)[] = [];
+  for (const f of permitido) {
+    if (f in campos) {
+      const v = campos[f];
+      sets.push(`${f} = ?`);
+      vals.push(v === undefined || v === ('' as unknown) ? null : (v as string | number));
+    }
+  }
+  if (!sets.length) return;
+  vals.push(alunoId);
+  await run(`UPDATE alunos SET ${sets.join(', ')} WHERE id = ?`, vals);
+}
+
+// ─── EMPRESA — favoritos / Kanban ─────────────────────────────────────────
+export const STATUS_FAVORITO = ['novo', 'contatado', 'entrevista_marcada', 'contratado', 'descartado'] as const;
+export type StatusFavorito = (typeof STATUS_FAVORITO)[number];
+
+export type Favorito = {
+  id: number;
+  nome: string;
+  curso: string | null;
+  semestre: number | null;
+  status: StatusFavorito;
+  media_geral: number | null;
+};
+
+export function favoritos(empresaId: number) {
+  return all<Favorito>(
+    `SELECT ef.aluno_id AS id, a.nome, a.curso, a.semestre_atual AS semestre, ef.status,
+            (SELECT ROUND(AVG(${NOTA('mencao')}), 1) FROM boletim WHERE aluno_id = a.id) AS media_geral
+       FROM empresa_favoritos ef
+       JOIN alunos a ON a.id = ef.aluno_id
+      WHERE ef.empresa_id = ?
+      ORDER BY a.nome`,
+    [empresaId],
+  );
+}
+
+export async function statusFavorito(empresaId: number, alunoId: number): Promise<StatusFavorito | null> {
+  const r = await first<{ status: StatusFavorito }>(
+    'SELECT status FROM empresa_favoritos WHERE empresa_id = ? AND aluno_id = ?',
+    [empresaId, alunoId],
+  );
+  return r?.status ?? null;
+}
+
+export async function favoritar(empresaId: number, alunoId: number): Promise<void> {
+  const existe = await statusFavorito(empresaId, alunoId);
+  if (!existe) {
+    await run(
+      "INSERT INTO empresa_favoritos (empresa_id, aluno_id, status) VALUES (?, ?, 'novo')",
+      [empresaId, alunoId],
+    );
+  }
+}
+
+export async function desfavoritar(empresaId: number, alunoId: number): Promise<void> {
+  await run('DELETE FROM empresa_favoritos WHERE empresa_id = ? AND aluno_id = ?', [empresaId, alunoId]);
+}
+
+export async function setStatusFavorito(
+  empresaId: number,
+  alunoId: number,
+  status: StatusFavorito,
+): Promise<void> {
+  const r = await run(
+    'UPDATE empresa_favoritos SET status = ? WHERE empresa_id = ? AND aluno_id = ?',
+    [status, empresaId, alunoId],
+  );
+  if (!r.changes) {
+    await run(
+      'INSERT INTO empresa_favoritos (empresa_id, aluno_id, status) VALUES (?, ?, ?)',
+      [empresaId, alunoId, status],
+    );
+  }
 }
