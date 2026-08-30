@@ -52,17 +52,20 @@ export function NotificacoesScreen() {
   const lerUma = useMutation({ mutationFn: (nid: number) => marcarLida(tipo, id, nid), onSuccess: invalidar });
   const lerTodas = useMutation({ mutationFn: () => marcarTodasLidas(tipo, id), onSuccess: invalidar });
 
-  function abrir(n: { id: number; tipo: string; titulo: string; referencia_id: number | null; lida: number }) {
+  async function abrir(n: { id: number; tipo: string; titulo: string; referencia_id: number | null; lida: number }) {
     if (!Number(n.lida)) lerUma.mutate(n.id);
-    if (TIPO_CONVERSA.includes(n.tipo) && n.referencia_id) {
-      const c = (conversas.data ?? []).find((x) => x.id === n.referencia_id);
-      nav.navigate('Conversa', {
-        conversaId: n.referencia_id,
-        nome: c?.outro_nome ?? n.titulo,
-        outroTipo: c?.outro_tipo,
-        outroId: c?.outro_id,
-      });
-    }
+    if (!TIPO_CONVERSA.includes(n.tipo) || !n.referencia_id) return;
+    // Se a lista de conversas ainda não carregou, busca agora — senão o header
+    // abriria com o título da notificação em vez do nome do outro participante.
+    let lista = conversas.data;
+    if (!lista) lista = (await conversas.refetch()).data ?? [];
+    const c = lista.find((x) => x.id === n.referencia_id);
+    nav.navigate('Conversa', {
+      conversaId: n.referencia_id,
+      nome: c?.outro_nome ?? n.titulo,
+      outroTipo: c?.outro_tipo,
+      outroId: c?.outro_id,
+    });
   }
 
   const temNaoLida = (q.data ?? []).some((n) => !Number(n.lida));

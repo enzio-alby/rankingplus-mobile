@@ -20,7 +20,8 @@ export function MeuPerfilScreen() {
   const qc = useQueryClient();
   const id = sessao?.id ?? 0;
   const q = useQuery({ queryKey: ['meu-perfil', id], queryFn: () => getMeuPerfil(id) });
-  const dash = useQuery({ queryKey: ['aluno-dash', id], queryFn: () => getDashboard(id) });
+  // Mesma queryKey do Dashboard — reaproveita o cache em vez de refazer as 3 chamadas.
+  const dash = useQuery({ queryKey: ['dashboard', id], queryFn: () => getDashboard(id) });
 
   const [nome, setNome] = useState('');
   const [telefone, setTelefone] = useState('');
