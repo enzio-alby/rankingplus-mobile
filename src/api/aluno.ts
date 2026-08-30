@@ -75,6 +75,33 @@ export function salvarMeuPerfil(alunoId: number, campos: local.CamposPerfilAluno
   );
 }
 
+// ─── Perfil profissional / ATS (resumo, experiências, formações, idiomas…) ──
+export function getPerfilProfissional(alunoId: number) {
+  return comFallback<local.PerfilProfissional>(
+    () => apiFetch(`/alunos/${alunoId}/perfil-profissional`),
+    () => local.perfilProfissional(alunoId),
+  );
+}
+
+export function salvarPerfilProfissional(alunoId: number, dados: local.CamposPerfilProfissional) {
+  return comFallback<void>(
+    async () => {
+      await apiFetch(`/alunos/${alunoId}/perfil-profissional`, { method: 'PUT', body: dados });
+    },
+    () => local.salvarPerfilProfissional(alunoId, dados),
+  );
+}
+
+export function getAreasFoco() {
+  return comFallback<local.AreaFoco[]>(
+    async () => {
+      const r = await apiFetch<local.AreaFoco[] | { areas?: local.AreaFoco[] }>('/dom/areas-foco');
+      return Array.isArray(r) ? r : (r.areas ?? []);
+    },
+    () => local.areasFoco(),
+  );
+}
+
 // ─── Gráficos ──────────────────────────────────────────────────────────────
 export function getDesempenho(alunoId: number) {
   return comFallback<local.SerieDesempenho>(

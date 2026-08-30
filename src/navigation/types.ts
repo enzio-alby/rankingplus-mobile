@@ -31,6 +31,7 @@ export type RootStackParamList = {
   Notificacoes: undefined;
   Relatorios: undefined;
   Talentos: undefined;
+  PerfilAts: undefined;
   // sempre disponível
   Termos: { origem: 'inicial' | 'app' } | undefined;
 };

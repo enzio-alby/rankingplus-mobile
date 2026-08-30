@@ -952,3 +952,197 @@ export function contratacoes(empresaId: number) {
     [empresaId],
   );
 }
+
+// ─── ALUNO — PERFIL PROFISSIONAL (ATS) ────────────────────────────────────
+// Espelha GET/PUT /alunos/:id/perfil-profissional do api2.js: resumo + área de
+// interesse + 5 sub-tabelas (pp_*). No demo grava no SQLite e zera ao sair.
+
+export type PPExperiencia = {
+  empresa: string;
+  cargo: string;
+  periodo_inicio: string | null;
+  periodo_fim: string | null;
+  descricao: string;
+};
+export type PPFormacao = {
+  curso: string;
+  instituicao: string;
+  periodo_inicio: string | null;
+  periodo_fim: string | null;
+};
+export type PPIdioma = { idioma: string; nivel: string };
+export type PPCertificacao = {
+  nome: string;
+  instituicao: string | null;
+  data_emissao: string | null;
+};
+export type AreaFoco = { id: number; nome: string };
+
+export type PerfilProfissional = {
+  resumo: string;
+  area_interesse_id: number | null;
+  area_interesse_nome: string | null;
+  experiencias: PPExperiencia[];
+  formacoes: PPFormacao[];
+  idiomas: PPIdioma[];
+  habilidades: string[];
+  certificacoes: PPCertificacao[];
+};
+
+export type CamposPerfilProfissional = Partial<{
+  resumo: string;
+  area_interesse_id: number | null;
+  experiencias: PPExperiencia[];
+  formacoes: PPFormacao[];
+  idiomas: PPIdioma[];
+  habilidades: string[];
+  certificacoes: PPCertificacao[];
+}>;
+
+// O seed sempre traz linhas dessas tabelas, mas garantimos a existência caso
+// um seed futuro venha sem elas (mesmo padrão do chat local).
+async function garantirTabelasPP(): Promise<void> {
+  await run(
+    'CREATE TABLE IF NOT EXISTS perfil_profissional (aluno_id INTEGER, resumo TEXT, area_interesse_id INTEGER, updated_at TEXT)',
+  );
+  await run(
+    'CREATE TABLE IF NOT EXISTS pp_experiencias (id INTEGER PRIMARY KEY AUTOINCREMENT, aluno_id INTEGER, empresa TEXT, cargo TEXT, periodo_inicio TEXT, periodo_fim TEXT, descricao TEXT)',
+  );
+  await run(
+    'CREATE TABLE IF NOT EXISTS pp_formacoes (id INTEGER PRIMARY KEY AUTOINCREMENT, aluno_id INTEGER, curso TEXT, instituicao TEXT, periodo_inicio TEXT, periodo_fim TEXT)',
+  );
+  await run(
+    'CREATE TABLE IF NOT EXISTS pp_idiomas (id INTEGER PRIMARY KEY AUTOINCREMENT, aluno_id INTEGER, idioma TEXT, nivel TEXT)',
+  );
+  await run(
+    'CREATE TABLE IF NOT EXISTS pp_habilidades (id INTEGER PRIMARY KEY AUTOINCREMENT, aluno_id INTEGER, habilidade TEXT)',
+  );
+  await run(
+    'CREATE TABLE IF NOT EXISTS pp_certificacoes (id INTEGER PRIMARY KEY AUTOINCREMENT, aluno_id INTEGER, nome TEXT, instituicao TEXT, data_emissao TEXT)',
+  );
+}
+
+export function areasFoco() {
+  return all<AreaFoco>('SELECT id, nome FROM dom_areas_foco ORDER BY nome');
+}
+
+export async function perfilProfissional(alunoId: number): Promise<PerfilProfissional> {
+  await garantirTabelasPP();
+  const pp = await first<{
+    resumo: string | null;
+    area_interesse_id: number | null;
+    area_interesse_nome: string | null;
+  }>(
+    `SELECT pp.resumo, pp.area_interesse_id, af.nome AS area_interesse_nome
+       FROM perfil_profissional pp
+       LEFT JOIN dom_areas_foco af ON af.id = pp.area_interesse_id
+      WHERE pp.aluno_id = ?`,
+    [alunoId],
+  );
+  const experiencias = await all<PPExperiencia>(
+    'SELECT empresa, cargo, periodo_inicio, periodo_fim, descricao FROM pp_experiencias WHERE aluno_id = ? ORDER BY id',
+    [alunoId],
+  );
+  const formacoes = await all<PPFormacao>(
+    'SELECT curso, instituicao, periodo_inicio, periodo_fim FROM pp_formacoes WHERE aluno_id = ? ORDER BY id',
+    [alunoId],
+  );
+  const idiomas = await all<PPIdioma>(
+    'SELECT idioma, nivel FROM pp_idiomas WHERE aluno_id = ? ORDER BY id',
+    [alunoId],
+  );
+  const habs = await all<{ habilidade: string }>(
+    'SELECT habilidade FROM pp_habilidades WHERE aluno_id = ? ORDER BY id',
+    [alunoId],
+  );
+  const certificacoes = await all<PPCertificacao>(
+    'SELECT nome, instituicao, data_emissao FROM pp_certificacoes WHERE aluno_id = ? ORDER BY id',
+    [alunoId],
+  );
+  return {
+    resumo: pp?.resumo ?? '',
+    area_interesse_id: pp?.area_interesse_id ?? null,
+    area_interesse_nome: pp?.area_interesse_nome ?? null,
+    experiencias,
+    formacoes,
+    idiomas,
+    habilidades: habs.map((h) => h.habilidade),
+    certificacoes,
+  };
+}
+
+export async function salvarPerfilProfissional(
+  alunoId: number,
+  d: CamposPerfilProfissional,
+): Promise<void> {
+  await garantirTabelasPP();
+
+  // Upsert do resumo + área (sem UNIQUE local em aluno_id → SELECT + UPDATE/INSERT).
+  const resumo = d.resumo ?? '';
+  const area = d.area_interesse_id ?? null;
+  const existe = await first<{ aluno_id: number }>(
+    'SELECT aluno_id FROM perfil_profissional WHERE aluno_id = ?',
+    [alunoId],
+  );
+  const agora = new Date().toISOString();
+  if (existe) {
+    await run(
+      'UPDATE perfil_profissional SET resumo = ?, area_interesse_id = ?, updated_at = ? WHERE aluno_id = ?',
+      [resumo, area, agora, alunoId],
+    );
+  } else {
+    await run(
+      'INSERT INTO perfil_profissional (aluno_id, resumo, area_interesse_id, updated_at) VALUES (?, ?, ?, ?)',
+      [alunoId, resumo, area, agora],
+    );
+  }
+
+  // Sub-tabelas: mesma estratégia do backend (limpa e reinsere) quando o campo veio.
+  if (d.experiencias) {
+    await run('DELETE FROM pp_experiencias WHERE aluno_id = ?', [alunoId]);
+    for (const e of d.experiencias) {
+      await run(
+        'INSERT INTO pp_experiencias (aluno_id, empresa, cargo, periodo_inicio, periodo_fim, descricao) VALUES (?, ?, ?, ?, ?, ?)',
+        [alunoId, e.empresa || '', e.cargo || '', e.periodo_inicio || null, e.periodo_fim || null, e.descricao || ''],
+      );
+    }
+  }
+  if (d.formacoes) {
+    await run('DELETE FROM pp_formacoes WHERE aluno_id = ?', [alunoId]);
+    for (const f of d.formacoes) {
+      await run(
+        'INSERT INTO pp_formacoes (aluno_id, curso, instituicao, periodo_inicio, periodo_fim) VALUES (?, ?, ?, ?, ?)',
+        [alunoId, f.curso || '', f.instituicao || '', f.periodo_inicio || null, f.periodo_fim || null],
+      );
+    }
+  }
+  if (d.idiomas) {
+    await run('DELETE FROM pp_idiomas WHERE aluno_id = ?', [alunoId]);
+    for (const i of d.idiomas) {
+      await run('INSERT INTO pp_idiomas (aluno_id, idioma, nivel) VALUES (?, ?, ?)', [
+        alunoId,
+        i.idioma || '',
+        i.nivel || 'Básico',
+      ]);
+    }
+  }
+  if (d.habilidades) {
+    await run('DELETE FROM pp_habilidades WHERE aluno_id = ?', [alunoId]);
+    for (const h of d.habilidades) {
+      if (h && h.trim()) {
+        await run('INSERT INTO pp_habilidades (aluno_id, habilidade) VALUES (?, ?)', [alunoId, h.trim()]);
+      }
+    }
+  }
+  if (d.certificacoes) {
+    await run('DELETE FROM pp_certificacoes WHERE aluno_id = ?', [alunoId]);
+    for (const c of d.certificacoes) {
+      if (c.nome && c.nome.trim()) {
+        await run(
+          'INSERT INTO pp_certificacoes (aluno_id, nome, instituicao, data_emissao) VALUES (?, ?, ?, ?)',
+          [alunoId, c.nome.trim(), c.instituicao || null, c.data_emissao || null],
+        );
+      }
+    }
+  }
+}

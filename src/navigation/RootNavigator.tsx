@@ -12,6 +12,7 @@ import { EditarLancamentoScreen } from '@/screens/professor/EditarLancamentoScre
 import { ConversaScreen } from '@/screens/ConversaScreen';
 import { NotificacoesScreen } from '@/screens/NotificacoesScreen';
 import { RelatoriosScreen } from '@/screens/aluno/RelatoriosScreen';
+import { PerfilAtsScreen } from '@/screens/aluno/PerfilAtsScreen';
 import { TalentosScreen } from '@/screens/empresa/TalentosScreen';
 import { RoleTabs } from '@/navigation/RoleTabs';
 
@@ -63,6 +64,11 @@ export function RootNavigator() {
               name="Relatorios"
               component={RelatoriosScreen}
               options={{ headerShown: true, title: 'Relatórios' }}
+            />
+            <Stack.Screen
+              name="PerfilAts"
+              component={PerfilAtsScreen}
+              options={{ headerShown: true, title: 'Currículo / Perfil profissional' }}
             />
             <Stack.Screen
               name="Talentos"

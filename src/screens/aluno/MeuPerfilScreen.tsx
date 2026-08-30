@@ -159,6 +159,16 @@ export function MeuPerfilScreen() {
 
             <Pressable
               style={styles.linkRow}
+              onPress={() => nav.navigate('PerfilAts')}
+              accessibilityRole="button"
+              accessibilityLabel="Abrir currículo e perfil profissional"
+            >
+              <Ionicons name="briefcase-outline" size={18} color={colors.textMuted} />
+              <Text style={styles.linkTxt}>Currículo / Perfil profissional</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} style={{ marginLeft: 'auto' }} />
+            </Pressable>
+            <Pressable
+              style={styles.linkRow}
               onPress={() => nav.navigate('Termos', { origem: 'app' })}
               accessibilityRole="link"
               accessibilityLabel="Abrir termos e privacidade"
