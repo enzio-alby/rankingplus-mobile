@@ -1,13 +1,10 @@
-// @ts-nocheck — arquivo parqueado; só entra no build quando virar `google.ts` na Fase 2.
 /**
- * IMPLEMENTAÇÃO REAL do login com Google — NÃO importar ainda.
+ * IMPLEMENTAÇÃO REAL do "Entrar com Google" (Fase 2).
  *
- * `Google.useAuthRequest` lança no render (Android) sem `androidClientId`, então
- * só ligar isto quando `GOOGLE.androidClientId` estiver preenchido em app.json
- * (client Android criado no Google Cloud com o SHA-1 de `eas credentials`) E o
- * app estiver rodando como development/production build (não Expo Go).
- *
- * Pra ativar: renomear este arquivo pra `google.ts` (substituindo o stub).
+ * `google.ts` só seleciona este hook quando `GOOGLE.androidClientId` está
+ * preenchido (client Android criado no Google Cloud com o SHA-1 do
+ * `eas credentials`). `Google.useAuthRequest` NÃO roda no Expo Go — precisa de um
+ * development/production build (`eas build --profile development`).
  */
 import { useEffect, useState } from 'react';
 import * as WebBrowser from 'expo-web-browser';
@@ -15,11 +12,9 @@ import * as Google from 'expo-auth-session/providers/google';
 import { GOOGLE } from '@/config';
 import type { PerfilGoogle } from '@/auth/google-types';
 
-export type { PerfilGoogle } from '@/auth/google-types';
-
 WebBrowser.maybeCompleteAuthSession();
 
-export function useGoogleLogin(onOk: (p: PerfilGoogle) => void) {
+export function useGoogleLoginReal(onOk: (p: PerfilGoogle) => void) {
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
