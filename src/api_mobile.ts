@@ -123,3 +123,326 @@ export async function dashboardAluno(alunoId: number): Promise<MetricasAluno> {
     posicao_ranking: posicao,
   };
 }
+
+// ─── PROFESSOR ──────────────────────────────────────────────────────────────
+export type StatsProfessor = {
+  turmas: number;
+  alunos: number;
+  media_geral: number | null;
+  presenca_media: number | null;
+};
+
+export async function statsProfessor(profId: number): Promise<StatsProfessor> {
+  const t = await first<{ n: number }>(
+    'SELECT COUNT(*) AS n FROM disciplinas WHERE professor_id = ?', [profId],
+  );
+  const a = await first<{ n: number }>(
+    `SELECT COUNT(DISTINCT b.aluno_id) AS n
+       FROM boletim b JOIN disciplinas d ON b.disciplina_id = d.id
+      WHERE d.professor_id = ?`, [profId],
+  );
+  const m = await first<{ media: number | null; presenca: number | null }>(
+    `SELECT ROUND(AVG(${NOTA('b.mencao')}), 1) AS media,
+            MAX(0, ROUND(100 - AVG(CAST(b.faltas AS REAL)) * 2, 0)) AS presenca
+       FROM boletim b JOIN disciplinas d ON b.disciplina_id = d.id
+      WHERE d.professor_id = ?`, [profId],
+  );
+  return {
+    turmas: Number(t?.n ?? 0),
+    alunos: Number(a?.n ?? 0),
+    media_geral: m?.media ?? null,
+    presenca_media: m?.presenca ?? null,
+  };
+}
+
+export type DisciplinaProfessor = {
+  id: number;
+  nome_materia: string;
+  sala: string | null;
+  dia_semana: string | null;
+  horario: string | null;
+  total_alunos: number;
+};
+
+export function disciplinasProfessor(profId: number) {
+  return all<DisciplinaProfessor>(
+    `SELECT d.id, d.nome_materia, d.sala, d.dia_semana, d.horario,
+            COUNT(DISTINCT b.aluno_id) AS total_alunos
+       FROM disciplinas d
+       LEFT JOIN boletim b ON b.disciplina_id = d.id
+      WHERE d.professor_id = ?
+      GROUP BY d.id
+      ORDER BY d.nome_materia`, [profId],
+  );
+}
+
+export type AlunoDaTurma = {
+  id: number;
+  nome: string;
+  matricula: string | null;
+  mencao: string | null;
+  faltas: number;
+  nota_avaliacao: number | null;
+  atividades_entregues: number;
+  frequencia: number;
+};
+
+export function alunosDaDisciplina(profId: number, discId: number) {
+  return all<AlunoDaTurma>(
+    `SELECT a.id, a.nome, a.matricula, b.mencao, b.faltas,
+            CAST(b.nota_avaliacao AS REAL) AS nota_avaliacao,
+            b.atividades_entregues,
+            MAX(0, 100 - CAST(b.faltas AS REAL) * 2) AS frequencia
+       FROM boletim b
+       JOIN alunos a ON b.aluno_id = a.id
+       JOIN disciplinas d ON b.disciplina_id = d.id
+      WHERE b.disciplina_id = ? AND d.professor_id = ?
+      ORDER BY b.mencao ASC, a.nome ASC`, [discId, profId],
+  );
+}
+
+// ─── EMPRESA — COMPATIBILIDADE (porta de _calcularCompatibilidade do api2.js) ─
+const COMPAT_PESOS = { cra: 30, area: 25, comportamental: 20, frequencia: 10, curso: 10, semestre: 5 };
+const AREAS_ADJ = [
+  ['backend', 'full stack', 'frontend', 'front-end', 'web'],
+  ['data science', 'dados', 'analytics', 'machine learning', 'inteligência artificial', ' ia'],
+  ['devops', 'sre', 'cloud', 'infraestrutura', 'seguran'],
+];
+function areasAdjacentes(a: string | null, b: string | null) {
+  if (!a || !b || a === b) return false;
+  const la = a.toLowerCase();
+  const lb = b.toLowerCase();
+  return AREAS_ADJ.some((g) => g.some((k) => la.includes(k)) && g.some((k) => lb.includes(k)));
+}
+
+export type Compatibilidade = {
+  score: number;
+  faixa: 'alta' | 'media' | 'baixa';
+  componentes: { rotulo: string; aplicavel: boolean; obtido: number; peso: number; detalhe: string }[];
+};
+
+type DadosAluno = {
+  area_interesse_nome: string | null;
+  curso: string | null;
+  semestre: number | null;
+  media_geral: number | null;
+  frequencia: number | null;
+  perfil_dominante: string | null;
+};
+type Alvo = {
+  area_foco_nome: string | null;
+  curso_preferido: string | null;
+  semestre_minimo: number | null;
+  perfis_procurados: string[];
+};
+
+function calcularCompat(al: DadosAluno, alvo: Alvo | null): Compatibilidade | null {
+  if (!alvo) return null;
+  const comp: Compatibilidade['componentes'] = [];
+  const add = (
+    chave: keyof typeof COMPAT_PESOS,
+    rotulo: string,
+    ap: boolean,
+    frac: number,
+    det: string,
+  ) => {
+    const peso = COMPAT_PESOS[chave];
+    comp.push({ rotulo, aplicavel: ap, obtido: ap ? Math.round(peso * frac) : 0, peso, detalhe: det });
+  };
+
+  const cra = Number(al.media_geral);
+  add('cra', 'Desempenho academico', Number.isFinite(cra),
+    Number.isFinite(cra) ? Math.max(0, Math.min(1, cra / 10)) : 0,
+    Number.isFinite(cra) ? `CRA ${cra.toFixed(1)}` : 'sem notas');
+
+  const temArea = !!(alvo.area_foco_nome && al.area_interesse_nome);
+  let fa = 0;
+  let da = 'area nao informada';
+  if (temArea) {
+    if (al.area_interesse_nome === alvo.area_foco_nome) {
+      fa = 1;
+      da = `ambos em ${alvo.area_foco_nome}`;
+    } else if (areasAdjacentes(al.area_interesse_nome, alvo.area_foco_nome)) {
+      fa = 0.4;
+      da = `${al.area_interesse_nome} ~ ${alvo.area_foco_nome}`;
+    } else {
+      da = `${al.area_interesse_nome} vs ${alvo.area_foco_nome}`;
+    }
+  }
+  add('area', 'Area de atuacao', temArea, fa, da);
+
+  const proc = alvo.perfis_procurados ?? [];
+  const temComp = proc.length > 0 && !!al.perfil_dominante;
+  const bate = temComp && proc.includes(al.perfil_dominante as string);
+  add('comportamental', 'Perfil comportamental', temComp, bate ? 1 : 0,
+    !temComp
+      ? 'empresa sem perfis / aluno sem avaliacao'
+      : bate
+        ? `perfil "${al.perfil_dominante}" procurado`
+        : `perfil "${al.perfil_dominante}" fora`);
+
+  const fq = Number(al.frequencia);
+  add('frequencia', 'Frequencia', Number.isFinite(fq),
+    Number.isFinite(fq) ? Math.max(0, Math.min(1, fq / 100)) : 0,
+    Number.isFinite(fq) ? `${Math.round(fq)}% presenca` : 'sem dado');
+
+  const tc = !!alvo.curso_preferido;
+  const cb = tc &&
+    String(alvo.curso_preferido).trim().toLowerCase() === String(al.curso ?? '').trim().toLowerCase();
+  add('curso', 'Curso', tc, cb ? 1 : 0,
+    !tc ? 'nao exige curso' : cb ? `cursa ${al.curso}` : `pede ${alvo.curso_preferido}`);
+
+  const ts = alvo.semestre_minimo != null && Number(alvo.semestre_minimo) > 0;
+  const sb = ts && Number(al.semestre ?? 0) >= Number(alvo.semestre_minimo);
+  add('semestre', 'Semestre', ts, sb ? 1 : 0,
+    !ts ? 'sem minimo' : sb ? `${al.semestre}o sem.` : `abaixo do minimo (${alvo.semestre_minimo}o)`);
+
+  const aplic = comp.filter((c) => c.aplicavel);
+  if (!aplic.length) return null;
+  const score = Math.round(
+    (100 * aplic.reduce((s, c) => s + c.obtido, 0)) / aplic.reduce((s, c) => s + c.peso, 0),
+  );
+  return { score, faixa: score >= 75 ? 'alta' : score >= 50 ? 'media' : 'baixa', componentes: comp };
+}
+
+async function alvoDaEmpresa(empresaId: number): Promise<Alvo | null> {
+  const perfis = (
+    await all<{ perfil: string }>(
+      'SELECT perfil FROM empresa_perfis_procurados WHERE empresa_id = ? ORDER BY ordem',
+      [empresaId],
+    )
+  ).map((r) => r.perfil);
+  const ei = await first<{
+    curso_preferido: string | null;
+    semestre_minimo: number | null;
+    area_foco_nome: string | null;
+  }>(
+    `SELECT ei.curso_preferido, ei.semestre_minimo, af.nome AS area_foco_nome
+       FROM empresa_interesses ei
+       LEFT JOIN dom_areas_foco af ON af.id = ei.area_foco_id
+      WHERE ei.empresa_id = ? LIMIT 1`,
+    [empresaId],
+  );
+  if (!ei && !perfis.length) return null;
+  return {
+    area_foco_nome: ei?.area_foco_nome ?? null,
+    curso_preferido: ei?.curso_preferido ?? null,
+    semestre_minimo: ei?.semestre_minimo ?? null,
+    perfis_procurados: perfis,
+  };
+}
+
+async function dadosCompatAluno(alunoId: number): Promise<DadosAluno> {
+  const a = await first<{ curso: string | null; semestre_atual: number | null }>(
+    'SELECT curso, semestre_atual FROM alunos WHERE id = ?', [alunoId],
+  );
+  const med = await first<{ m: number | null }>(
+    `SELECT ROUND(AVG(${NOTA('mencao')}), 1) AS m FROM boletim WHERE aluno_id = ?`, [alunoId],
+  );
+  const fq = await first<{ f: number | null }>(
+    `SELECT MAX(0, 100 - SUM(CAST(faltas AS REAL)) * 2) AS f FROM boletim WHERE aluno_id = ?`, [alunoId],
+  );
+  const ar = await first<{ nome: string | null }>(
+    `SELECT af.nome FROM perfil_profissional pp
+       LEFT JOIN dom_areas_foco af ON af.id = pp.area_interesse_id
+      WHERE pp.aluno_id = ?`, [alunoId],
+  );
+  const pf = await first<{ p: string | null }>(
+    `SELECT perfil_dominante AS p FROM avaliacoes_comportamentais
+      WHERE aluno_id = ? ORDER BY id DESC LIMIT 1`, [alunoId],
+  );
+  return {
+    area_interesse_nome: ar?.nome ?? null,
+    curso: a?.curso ?? null,
+    semestre: a?.semestre_atual ?? null,
+    media_geral: med?.m ?? null,
+    frequencia: fq?.f ?? null,
+    perfil_dominante: pf?.p ?? null,
+  };
+}
+
+// ─── EMPRESA — PORTAL DE TALENTOS ───────────────────────────────────────────
+export type Talento = {
+  id: number;
+  nome: string;
+  curso: string | null;
+  semestre: number | null;
+  media_geral: number | null;
+  pontos_fortes: { disciplina: string; media: number }[];
+  compatibilidade: Compatibilidade | null;
+};
+
+export async function talentos(empresaId?: number): Promise<Talento[]> {
+  const base = await all<{
+    id: number;
+    nome: string;
+    curso: string | null;
+    semestre: number | null;
+    media_geral: number | null;
+  }>(
+    `SELECT a.id, a.nome, a.curso, a.semestre_atual AS semestre,
+            ROUND(AVG(${NOTA('b.mencao')}), 1) AS media_geral
+       FROM alunos a JOIN boletim b ON a.id = b.aluno_id
+      WHERE COALESCE(a.permitir_exibicao_ranking, 1) = 1
+      GROUP BY a.id
+      ORDER BY media_geral DESC`,
+  );
+  const alvo = empresaId ? await alvoDaEmpresa(empresaId) : null;
+
+  const out: Talento[] = [];
+  for (const t of base) {
+    const fortes = await all<{ disciplina: string; media: number }>(
+      `SELECT d.nome_materia AS disciplina, ROUND(AVG(${NOTA('b.mencao')}), 1) AS media
+         FROM boletim b JOIN disciplinas d ON b.disciplina_id = d.id
+        WHERE b.aluno_id = ?
+        GROUP BY d.id HAVING media >= 8.5
+        ORDER BY media DESC LIMIT 3`,
+      [t.id],
+    );
+    let compat: Compatibilidade | null = null;
+    if (alvo) compat = calcularCompat(await dadosCompatAluno(t.id), alvo);
+    out.push({ ...t, pontos_fortes: fortes, compatibilidade: compat });
+  }
+  return out;
+}
+
+export type PerfilCandidato = {
+  id: number;
+  nome: string;
+  curso: string | null;
+  semestre: number | null;
+  metricas: MetricasAluno;
+  disciplinas_destaque: { nome_materia: string; mencao: string | null; nota: number }[];
+  compatibilidade: Compatibilidade | null;
+};
+
+export async function perfilCandidato(
+  alunoId: number,
+  empresaId?: number,
+): Promise<PerfilCandidato> {
+  const a = await first<{ nome: string; curso: string | null; semestre: number | null }>(
+    'SELECT nome, curso, semestre_atual AS semestre FROM alunos WHERE id = ?', [alunoId],
+  );
+  const metricas = await dashboardAluno(alunoId);
+  const destaque = await all<{ nome_materia: string; mencao: string | null; nota: number }>(
+    `SELECT d.nome_materia, b.mencao, ROUND(${NOTA('b.mencao')}, 1) AS nota
+       FROM boletim b JOIN disciplinas d ON b.disciplina_id = d.id
+      WHERE b.aluno_id = ? AND b.mencao IN ('SS','MS')
+      ORDER BY nota DESC LIMIT 6`,
+    [alunoId],
+  );
+  let compat: Compatibilidade | null = null;
+  if (empresaId) {
+    const alvo = await alvoDaEmpresa(empresaId);
+    if (alvo) compat = calcularCompat(await dadosCompatAluno(alunoId), alvo);
+  }
+  return {
+    id: alunoId,
+    nome: a?.nome ?? '',
+    curso: a?.curso ?? null,
+    semestre: a?.semestre ?? null,
+    metricas,
+    disciplinas_destaque: destaque,
+    compatibilidade: compat,
+  };
+}

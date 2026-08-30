@@ -6,6 +6,9 @@ import { makePlaceholder } from '@/screens/common/PlaceholderScreen';
 import { DashboardScreen } from '@/screens/aluno/DashboardScreen';
 import { BoletimScreen } from '@/screens/aluno/BoletimScreen';
 import { RankingScreen } from '@/screens/aluno/RankingScreen';
+import { ProfDashboardScreen } from '@/screens/professor/DashboardScreen';
+import { ProfTurmasScreen } from '@/screens/professor/TurmasScreen';
+import { TalentosScreen } from '@/screens/empresa/TalentosScreen';
 import { colors } from '@/theme/tokens';
 
 const Tab = createBottomTabNavigator();
@@ -26,12 +29,12 @@ const TABS: Record<Papel, TabDef[]> = {
     { name: 'AlunoPerfil', titulo: 'Perfil', icon: 'person', component: makePlaceholder('Meu Perfil') },
   ],
   professor: [
-    { name: 'ProfDashboard', titulo: 'Início', icon: 'home', component: makePlaceholder('Início') },
-    { name: 'ProfTurmas', titulo: 'Turmas', icon: 'people', component: makePlaceholder('Turmas') },
+    { name: 'ProfDashboard', titulo: 'Início', icon: 'home', component: ProfDashboardScreen },
+    { name: 'ProfTurmas', titulo: 'Turmas', icon: 'people', component: ProfTurmasScreen },
     { name: 'ProfPerfil', titulo: 'Perfil', icon: 'person', component: makePlaceholder('Perfil') },
   ],
   empresa: [
-    { name: 'EmpTalentos', titulo: 'Talentos', icon: 'search', component: makePlaceholder('Portal de Talentos') },
+    { name: 'EmpTalentos', titulo: 'Talentos', icon: 'search', component: TalentosScreen },
     { name: 'EmpFavoritos', titulo: 'Favoritos', icon: 'star', component: makePlaceholder('Favoritos') },
     { name: 'EmpVagas', titulo: 'Vagas', icon: 'briefcase', component: makePlaceholder('Minhas Vagas') },
     { name: 'EmpMensagens', titulo: 'Mensagens', icon: 'chatbubbles', component: makePlaceholder('Mensagens') },
