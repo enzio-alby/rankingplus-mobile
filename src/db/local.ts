@@ -104,3 +104,9 @@ export async function run(
   const db = await getDb();
   return db.runAsync(sql, params);
 }
+
+/** Roda `fn` dentro de uma transação (tudo ou nada). */
+export async function tx(fn: () => Promise<void>): Promise<void> {
+  const db = await getDb();
+  await db.withTransactionAsync(fn);
+}

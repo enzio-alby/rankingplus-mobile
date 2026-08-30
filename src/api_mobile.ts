@@ -6,7 +6,7 @@
  * Regra de ouro: MESMA regra do backend (escala de menção, anonimização LGPD,
  * fórmula de frequência) — se divergir, o app mostra número diferente do site.
  */
-import { all, first, run } from '@/db/local';
+import { all, first, run, tx } from '@/db/local';
 
 /** Escala oficial menção→nota (igual `mencaoParaNotaSQL` do api2.js). */
 const NOTA = (col: string) =>
@@ -1077,72 +1077,76 @@ export async function salvarPerfilProfissional(
 ): Promise<void> {
   await garantirTabelasPP();
 
-  // Upsert do resumo + área (sem UNIQUE local em aluno_id → SELECT + UPDATE/INSERT).
-  const resumo = d.resumo ?? '';
-  const area = d.area_interesse_id ?? null;
-  const existe = await first<{ aluno_id: number }>(
-    'SELECT aluno_id FROM perfil_profissional WHERE aluno_id = ?',
-    [alunoId],
-  );
-  const agora = new Date().toISOString();
-  if (existe) {
-    await run(
-      'UPDATE perfil_profissional SET resumo = ?, area_interesse_id = ?, updated_at = ? WHERE aluno_id = ?',
-      [resumo, area, agora, alunoId],
+  // Tudo dentro de uma transação (igual ao backend): se algo falhar no meio,
+  // o perfil não fica com metade das seções gravadas.
+  await tx(async () => {
+    // Upsert do resumo + área (sem UNIQUE local em aluno_id → SELECT + UPDATE/INSERT).
+    const resumo = d.resumo ?? '';
+    const area = d.area_interesse_id ?? null;
+    const existe = await first<{ aluno_id: number }>(
+      'SELECT aluno_id FROM perfil_profissional WHERE aluno_id = ?',
+      [alunoId],
     );
-  } else {
-    await run(
-      'INSERT INTO perfil_profissional (aluno_id, resumo, area_interesse_id, updated_at) VALUES (?, ?, ?, ?)',
-      [alunoId, resumo, area, agora],
-    );
-  }
+    const agora = new Date().toISOString();
+    if (existe) {
+      await run(
+        'UPDATE perfil_profissional SET resumo = ?, area_interesse_id = ?, updated_at = ? WHERE aluno_id = ?',
+        [resumo, area, agora, alunoId],
+      );
+    } else {
+      await run(
+        'INSERT INTO perfil_profissional (aluno_id, resumo, area_interesse_id, updated_at) VALUES (?, ?, ?, ?)',
+        [alunoId, resumo, area, agora],
+      );
+    }
 
-  // Sub-tabelas: mesma estratégia do backend (limpa e reinsere) quando o campo veio.
-  if (d.experiencias) {
-    await run('DELETE FROM pp_experiencias WHERE aluno_id = ?', [alunoId]);
-    for (const e of d.experiencias) {
-      await run(
-        'INSERT INTO pp_experiencias (aluno_id, empresa, cargo, periodo_inicio, periodo_fim, descricao) VALUES (?, ?, ?, ?, ?, ?)',
-        [alunoId, e.empresa || '', e.cargo || '', e.periodo_inicio || null, e.periodo_fim || null, e.descricao || ''],
-      );
-    }
-  }
-  if (d.formacoes) {
-    await run('DELETE FROM pp_formacoes WHERE aluno_id = ?', [alunoId]);
-    for (const f of d.formacoes) {
-      await run(
-        'INSERT INTO pp_formacoes (aluno_id, curso, instituicao, periodo_inicio, periodo_fim) VALUES (?, ?, ?, ?, ?)',
-        [alunoId, f.curso || '', f.instituicao || '', f.periodo_inicio || null, f.periodo_fim || null],
-      );
-    }
-  }
-  if (d.idiomas) {
-    await run('DELETE FROM pp_idiomas WHERE aluno_id = ?', [alunoId]);
-    for (const i of d.idiomas) {
-      await run('INSERT INTO pp_idiomas (aluno_id, idioma, nivel) VALUES (?, ?, ?)', [
-        alunoId,
-        i.idioma || '',
-        i.nivel || 'Básico',
-      ]);
-    }
-  }
-  if (d.habilidades) {
-    await run('DELETE FROM pp_habilidades WHERE aluno_id = ?', [alunoId]);
-    for (const h of d.habilidades) {
-      if (h && h.trim()) {
-        await run('INSERT INTO pp_habilidades (aluno_id, habilidade) VALUES (?, ?)', [alunoId, h.trim()]);
-      }
-    }
-  }
-  if (d.certificacoes) {
-    await run('DELETE FROM pp_certificacoes WHERE aluno_id = ?', [alunoId]);
-    for (const c of d.certificacoes) {
-      if (c.nome && c.nome.trim()) {
+    // Sub-tabelas: mesma estratégia do backend (limpa e reinsere) quando o campo veio.
+    if (d.experiencias) {
+      await run('DELETE FROM pp_experiencias WHERE aluno_id = ?', [alunoId]);
+      for (const e of d.experiencias) {
         await run(
-          'INSERT INTO pp_certificacoes (aluno_id, nome, instituicao, data_emissao) VALUES (?, ?, ?, ?)',
-          [alunoId, c.nome.trim(), c.instituicao || null, c.data_emissao || null],
+          'INSERT INTO pp_experiencias (aluno_id, empresa, cargo, periodo_inicio, periodo_fim, descricao) VALUES (?, ?, ?, ?, ?, ?)',
+          [alunoId, e.empresa || '', e.cargo || '', e.periodo_inicio || null, e.periodo_fim || null, e.descricao || ''],
         );
       }
     }
-  }
+    if (d.formacoes) {
+      await run('DELETE FROM pp_formacoes WHERE aluno_id = ?', [alunoId]);
+      for (const f of d.formacoes) {
+        await run(
+          'INSERT INTO pp_formacoes (aluno_id, curso, instituicao, periodo_inicio, periodo_fim) VALUES (?, ?, ?, ?, ?)',
+          [alunoId, f.curso || '', f.instituicao || '', f.periodo_inicio || null, f.periodo_fim || null],
+        );
+      }
+    }
+    if (d.idiomas) {
+      await run('DELETE FROM pp_idiomas WHERE aluno_id = ?', [alunoId]);
+      for (const i of d.idiomas) {
+        await run('INSERT INTO pp_idiomas (aluno_id, idioma, nivel) VALUES (?, ?, ?)', [
+          alunoId,
+          i.idioma || '',
+          i.nivel || 'Básico',
+        ]);
+      }
+    }
+    if (d.habilidades) {
+      await run('DELETE FROM pp_habilidades WHERE aluno_id = ?', [alunoId]);
+      for (const h of d.habilidades) {
+        if (h && h.trim()) {
+          await run('INSERT INTO pp_habilidades (aluno_id, habilidade) VALUES (?, ?)', [alunoId, h.trim()]);
+        }
+      }
+    }
+    if (d.certificacoes) {
+      await run('DELETE FROM pp_certificacoes WHERE aluno_id = ?', [alunoId]);
+      for (const c of d.certificacoes) {
+        if (c.nome && c.nome.trim()) {
+          await run(
+            'INSERT INTO pp_certificacoes (aluno_id, nome, instituicao, data_emissao) VALUES (?, ?, ?, ?)',
+            [alunoId, c.nome.trim(), c.instituicao || null, c.data_emissao || null],
+          );
+        }
+      }
+    }
+  });
 }

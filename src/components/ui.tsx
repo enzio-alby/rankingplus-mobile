@@ -12,6 +12,8 @@ export const ScreenScroll = forwardRef<
   return (
     <ScrollView
       ref={ref}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
       style={{ backgroundColor: colors.bgMuted }}
       contentContainerStyle={{
         paddingHorizontal: spacing.md,
