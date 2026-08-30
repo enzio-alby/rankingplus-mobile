@@ -16,6 +16,7 @@ import { RelatoriosScreen } from '@/screens/aluno/RelatoriosScreen';
 import { PerfilAtsScreen } from '@/screens/aluno/PerfilAtsScreen';
 import { RelatorioPreviewScreen } from '@/screens/RelatorioPreviewScreen';
 import { TalentosScreen } from '@/screens/empresa/TalentosScreen';
+import { VagaFormScreen } from '@/screens/empresa/VagaFormScreen';
 import { RoleTabs } from '@/navigation/RoleTabs';
 
 const TalentosReadonly = () => <TalentosScreen readonly />;
@@ -61,6 +62,11 @@ export function RootNavigator() {
               name="NovaConversa"
               component={NovaConversaScreen}
               options={{ headerShown: true, title: 'Nova conversa' }}
+            />
+            <Stack.Screen
+              name="VagaForm"
+              component={VagaFormScreen}
+              options={{ headerShown: true, title: 'Vaga' }}
             />
             <Stack.Screen
               name="Notificacoes"

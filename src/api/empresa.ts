@@ -45,12 +45,41 @@ export function getPerfilCandidato(alunoId: number, empresaId?: number) {
 export function getVagasEmpresa(empresaId: number) {
   return comFallback<local.VagaEmpresa[]>(
     async () => {
-      const r = await apiFetch<local.VagaEmpresa[] | { vagas?: local.VagaEmpresa[] }>(
-        `/empresas/${empresaId}/vagas`,
-      );
-      return Array.isArray(r) ? r : (r.vagas ?? []);
+      const r = await apiFetch<
+        (local.VagaEmpresa & { interessados_count?: number })[] | { vagas?: local.VagaEmpresa[] }
+      >(`/empresas/${empresaId}/vagas`);
+      const arr = Array.isArray(r) ? r : (r.vagas ?? []);
+      // o backend devolve `interessados_count`; a UI usa `interessados`.
+      return arr.map((v) => ({
+        ...v,
+        interessados: Number((v as { interessados_count?: number }).interessados_count ?? v.interessados ?? 0),
+      }));
     },
     () => local.vagasDaEmpresa(empresaId),
+  );
+}
+
+export function getTiposVaga() {
+  return comFallback<local.TipoVaga[]>(
+    async () => {
+      const r = await apiFetch<local.TipoVaga[] | { tipos?: local.TipoVaga[] }>('/dom/tipos-vaga');
+      return Array.isArray(r) ? r : (r.tipos ?? []);
+    },
+    () => local.tiposVaga(),
+  );
+}
+
+export function criarVaga(empresaId: number, campos: local.CamposVaga) {
+  return comFallback<{ id: number }>(
+    () => apiFetch(`/empresas/${empresaId}/vagas`, { method: 'POST', body: campos }),
+    () => local.criarVagaLocal(empresaId, campos),
+  );
+}
+
+export function atualizarVaga(empresaId: number, vagaId: number, campos: local.CamposVaga) {
+  return comFallback<unknown>(
+    () => apiFetch(`/empresas/${empresaId}/vagas/${vagaId}`, { method: 'PUT', body: campos }),
+    () => local.atualizarVagaLocal(empresaId, vagaId, campos),
   );
 }
 

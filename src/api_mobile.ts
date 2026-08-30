@@ -864,6 +864,8 @@ export type VagaEmpresa = {
   id: number;
   titulo: string;
   descricao: string | null;
+  area_foco_id: number | null;
+  tipo_vaga_id: number | null;
   area_foco_nome: string | null;
   tipo_vaga_nome: string | null;
   curso_preferido: string | null;
@@ -887,6 +889,7 @@ export function vagasDeInteresse(empresaId: number, alunoId: number) {
 export function vagasDaEmpresa(empresaId: number) {
   return all<VagaEmpresa>(
     `SELECT v.id, v.titulo, v.descricao, v.curso_preferido, v.semestre_minimo, v.status,
+            v.area_foco_id, v.tipo_vaga_id,
             af.nome AS area_foco_nome, tv.nome AS tipo_vaga_nome,
             (SELECT COUNT(*) FROM vaga_interesses vi WHERE vi.vaga_id = v.id) AS interessados
        FROM empresa_vagas v
@@ -896,6 +899,66 @@ export function vagasDaEmpresa(empresaId: number) {
       ORDER BY v.criado_em DESC`,
     [empresaId],
   );
+}
+
+export type TipoVaga = { id: number; nome: string };
+export function tiposVaga() {
+  return all<TipoVaga>('SELECT id, nome FROM dom_tipos_vaga ORDER BY nome');
+}
+
+export type CamposVaga = Partial<{
+  titulo: string;
+  descricao: string | null;
+  area_foco_id: number | null;
+  tipo_vaga_id: number | null;
+  curso_preferido: string | null;
+  semestre_minimo: number | null;
+  status: string;
+}>;
+
+const nulo = (v: unknown) => (v === undefined || v === '' ? null : (v as string | number));
+
+export async function criarVagaLocal(
+  empresaId: number,
+  c: CamposVaga,
+): Promise<{ id: number }> {
+  const r = await run(
+    `INSERT INTO empresa_vagas
+       (empresa_id, titulo, descricao, area_foco_id, tipo_vaga_id, curso_preferido, semestre_minimo, status, criado_em)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'aberta', ?)`,
+    [
+      empresaId,
+      (c.titulo ?? '').trim(),
+      nulo(c.descricao),
+      nulo(c.area_foco_id),
+      nulo(c.tipo_vaga_id),
+      nulo(c.curso_preferido),
+      nulo(c.semestre_minimo),
+      new Date().toISOString(),
+    ],
+  );
+  return { id: r.lastInsertRowId };
+}
+
+export async function atualizarVagaLocal(
+  empresaId: number,
+  vagaId: number,
+  c: CamposVaga,
+): Promise<void> {
+  const permitido: (keyof CamposVaga)[] = [
+    'titulo', 'descricao', 'area_foco_id', 'tipo_vaga_id', 'curso_preferido', 'semestre_minimo', 'status',
+  ];
+  const sets: string[] = [];
+  const vals: (string | number | null)[] = [];
+  for (const f of permitido) {
+    if (f in c) {
+      sets.push(`${f} = ?`);
+      vals.push(nulo(c[f]));
+    }
+  }
+  if (!sets.length) return;
+  vals.push(empresaId, vagaId);
+  await run(`UPDATE empresa_vagas SET ${sets.join(', ')} WHERE empresa_id = ? AND id = ?`, vals);
 }
 
 // ─── NOTIFICAÇÕES ────────────────────────────────────────────────────────

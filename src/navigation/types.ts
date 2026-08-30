@@ -1,4 +1,5 @@
 import type { Papel } from '@/types/api';
+import type { VagaEmpresa } from '@/api_mobile';
 
 /** Rotas do stack raiz (auth + app). As telas usam este tipo em
  *  `NativeStackScreenProps<RootStackParamList, 'X'>`. */
@@ -34,6 +35,7 @@ export type RootStackParamList = {
   PerfilAts: undefined;
   RelatorioPreview: { alunoId: number; nome: string };
   NovaConversa: undefined;
+  VagaForm: { vaga?: VagaEmpresa } | undefined;
   // sempre disponível
   Termos: { origem: 'inicial' | 'app' } | undefined;
 };
