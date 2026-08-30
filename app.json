@@ -55,6 +55,12 @@
         "projectId": "2cba9942-3b49-4224-8e8e-bf9d37e817f8"
       }
     },
-    "owner": "enzio_alby"
+    "owner": "enzio_alby",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/2cba9942-3b49-4224-8e8e-bf9d37e817f8"
+    }
   }
 }
