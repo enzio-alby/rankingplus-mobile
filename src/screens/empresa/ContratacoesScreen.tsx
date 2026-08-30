@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, Modal, ScrollView, Linking, Alert } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Modal, ScrollView } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
@@ -119,25 +119,14 @@ function ContratadoModal({
 
             <Text style={styles.secao}>Contato</Text>
             <Card>
-              <Contato icon="mail-outline" label="E-mail" valor={d.email} href={d.email ? `mailto:${d.email}` : null} />
-              <Contato
-                icon="call-outline"
-                label="Telefone"
-                valor={d.telefone}
-                href={d.telefone ? `tel:${d.telefone.replace(/[^\d+]/g, '')}` : null}
-              />
-              <Contato
-                icon="logo-linkedin"
-                label="LinkedIn"
-                valor={d.linkedin}
-                href={d.linkedin ? normalizarUrl(d.linkedin) : null}
-              />
-              <Contato
-                icon="logo-github"
-                label="GitHub"
-                valor={d.github}
-                href={d.github ? normalizarUrl(d.github) : null}
-              />
+              <Contato icon="mail-outline" label="E-mail" presente={!!d.email} />
+              <Contato icon="call-outline" label="Telefone" presente={!!d.telefone} />
+              <Contato icon="logo-linkedin" label="LinkedIn" presente={!!d.linkedin} />
+              <Contato icon="logo-github" label="GitHub" presente={!!d.github} />
+              <Text style={styles.lgpd}>
+                Os dados de contato ficam ocultos aqui por privacidade (LGPD). O contato real
+                acontece pelo chat da plataforma.
+              </Text>
             </Card>
 
             <Text style={styles.secao}>Vaga do processo</Text>
@@ -162,38 +151,34 @@ function ContratadoModal({
   );
 }
 
-function normalizarUrl(v: string) {
-  return /^https?:\/\//i.test(v) ? v : `https://${v}`;
-}
-
+/** Mostra apenas SE o contato existe, nunca o valor real (LGPD). */
 function Contato({
   icon,
   label,
-  valor,
-  href,
+  presente,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
-  valor: string | null;
-  href: string | null;
+  presente: boolean;
 }) {
-  const abrir = () => {
-    if (href) Linking.openURL(href).catch(() => Alert.alert(label, valor ?? '—'));
-  };
   return (
-    <Pressable
+    <View
       style={styles.contato}
-      disabled={!href}
-      onPress={abrir}
-      accessibilityRole={href ? 'link' : 'text'}
-      accessibilityLabel={`${label}: ${valor ?? 'não informado'}`}
+      accessibilityLabel={`${label}: ${presente ? 'informado, oculto por privacidade' : 'não informado'}`}
     >
       <Ionicons name={icon} size={16} color={colors.textMuted} style={{ width: 22 }} />
       <Text style={styles.contatoLabel}>{label}</Text>
-      <Text style={[styles.contatoValor, href && styles.link]} numberOfLines={1}>
-        {valor || '—'}
-      </Text>
-    </Pressable>
+      <View style={styles.contatoStatus}>
+        <Ionicons
+          name={presente ? 'lock-closed' : 'remove'}
+          size={13}
+          color={presente ? colors.textMuted : colors.border}
+        />
+        <Text style={[styles.contatoValor, !presente && { color: colors.textMuted }]}>
+          {presente ? 'Informado' : 'Não informado'}
+        </Text>
+      </View>
+    </View>
   );
 }
 
@@ -221,8 +206,12 @@ const styles = StyleSheet.create({
   },
   contato: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm },
   contatoLabel: { ...typography.small, color: colors.textMuted, width: 78 },
-  contatoValor: { ...typography.small, color: colors.text, flex: 1, textAlign: 'right' },
-  link: { color: colors.primary, textDecorationLine: 'underline' },
+  contatoStatus: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4 },
+  contatoValor: { ...typography.small, color: colors.text },
+  lgpd: {
+    ...typography.tiny, color: colors.textMuted, marginTop: spacing.sm,
+    borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.sm, lineHeight: 15,
+  },
   vaga: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xs },
   vagaTxt: { ...typography.body, color: colors.text, flex: 1 },
   vazioVaga: { ...typography.small, color: colors.textMuted },
