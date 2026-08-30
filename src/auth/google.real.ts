@@ -1,68 +1,75 @@
 /**
- * IMPLEMENTAÇÃO REAL do "Entrar com Google" (Fase 2).
+ * IMPLEMENTAÇÃO REAL do "Entrar com Google" (Fase 2) — via
+ * `@react-native-google-signin/google-signin` (SDK nativo do Google).
  *
- * `google.ts` só seleciona este hook quando `GOOGLE.androidClientId` está
- * preenchido (client Android criado no Google Cloud com o SHA-1 do
- * `eas credentials`). `Google.useAuthRequest` NÃO roda no Expo Go — precisa de um
- * development/production build (`eas build --profile development`).
+ * Precisa de:
+ *  - `GOOGLE.webClientId` (client OAuth do tipo **Web** no Google Cloud) — é o que
+ *    vai no `configure()`.
+ *  - Um client OAuth **Android** (package `rankingplus.p4` + SHA-1 do keystore do
+ *    EAS) existindo no mesmo projeto — o Google usa pra confiar na assinatura.
+ *  - Tela de consentimento OAuth criada (modo "Teste" serve; a conta que loga
+ *    precisa estar em "Usuários de teste", ou o app publicado).
+ *  - NÃO roda no Expo Go — só em development/preview/production build.
  */
 import { useEffect, useState } from 'react';
-import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
+import {
+  GoogleSignin,
+  isSuccessResponse,
+  isErrorWithCode,
+  statusCodes,
+} from '@react-native-google-signin/google-signin';
 import { GOOGLE } from '@/config';
 import type { PerfilGoogle } from '@/auth/google-types';
 
-WebBrowser.maybeCompleteAuthSession();
+let _configurado = false;
+function configurar() {
+  if (_configurado) return;
+  GoogleSignin.configure({ webClientId: GOOGLE.webClientId || undefined });
+  _configurado = true;
+}
 
 export function useGoogleLoginReal(onOk: (p: PerfilGoogle) => void) {
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    webClientId: GOOGLE.webClientId || undefined,
-    androidClientId: GOOGLE.androidClientId || undefined,
-    iosClientId: GOOGLE.iosClientId || undefined,
-  });
-
   useEffect(() => {
-    if (!response) return;
-    if (response.type !== 'success') {
-      if (response.type === 'error') setErro('Falha no login com Google.');
-      setCarregando(false);
-      return;
-    }
-    const token = response.authentication?.accessToken;
-    if (!token) {
-      setErro('Google não retornou um token.');
-      setCarregando(false);
-      return;
-    }
-    (async () => {
-      try {
-        const r = await fetch('https://www.googleapis.com/userinfo/v2/me', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const info = (await r.json()) as { name?: string; email?: string };
-        onOk({
-          nome: (info.name || info.email || 'Usuario').split(' ')[0],
-          email: info.email || '',
-        });
-      } catch {
-        setErro('Não foi possível ler o perfil do Google.');
-      } finally {
-        setCarregando(false);
-      }
-    })();
-  }, [response, onOk]);
+    configurar();
+  }, []);
 
   return {
-    disponivel: !!GOOGLE.androidClientId && !!request,
+    disponivel: !!GOOGLE.webClientId,
     carregando,
     erro,
     entrar: async () => {
       setErro(null);
       setCarregando(true);
-      await promptAsync();
+      try {
+        configurar();
+        await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+        const res = await GoogleSignin.signIn();
+        if (isSuccessResponse(res)) {
+          const u = res.data.user;
+          onOk({
+            nome: (u.givenName || u.name || u.email || 'Usuario').split(' ')[0],
+            email: u.email || '',
+          });
+        }
+        // type 'cancelled' → usuário fechou o seletor: sem erro visível
+      } catch (e) {
+        if (isErrorWithCode(e)) {
+          if (e.code === statusCodes.SIGN_IN_CANCELLED || e.code === statusCodes.IN_PROGRESS) {
+            // silencioso
+          } else if (e.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+            setErro('Google Play Services indisponível ou desatualizado neste aparelho.');
+          } else {
+            setErro('Falha no login com Google. Tente de novo.');
+          }
+        } else {
+          setErro('Falha no login com Google. Tente de novo.');
+        }
+      } finally {
+        setCarregando(false);
+      }
     },
   };
 }

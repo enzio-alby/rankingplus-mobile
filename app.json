@@ -38,6 +38,12 @@
           "imageWidth": 180,
           "resizeMode": "contain"
         }
+      ],
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.26234094144-5v6611hohqkgjjtfd64a2ad9eh6pj8jv"
+        }
       ]
     ],
     "extra": {
