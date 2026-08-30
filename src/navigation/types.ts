@@ -22,6 +22,7 @@ export type RootStackParamList = {
       atividades_entregues: number | null;
     };
   };
+  Conversa: { conversaId: number; nome: string };
   // sempre disponível
   Termos: { origem: 'inicial' | 'app' } | undefined;
 };

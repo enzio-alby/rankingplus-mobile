@@ -9,6 +9,7 @@ import { LoginEmailScreen } from '@/screens/LoginEmailScreen';
 import { OtpScreen } from '@/screens/OtpScreen';
 import { TermsScreen } from '@/screens/TermsScreen';
 import { EditarLancamentoScreen } from '@/screens/professor/EditarLancamentoScreen';
+import { ConversaScreen } from '@/screens/ConversaScreen';
 import { RoleTabs } from '@/navigation/RoleTabs';
 import type { RootStackParamList } from '@/navigation/types';
 import { colors } from '@/theme/tokens';
@@ -42,6 +43,11 @@ export function RootNavigator() {
               name="EditarLancamento"
               component={EditarLancamentoScreen}
               options={{ headerShown: true, title: 'Editar lançamento' }}
+            />
+            <Stack.Screen
+              name="Conversa"
+              component={ConversaScreen}
+              options={({ route }) => ({ headerShown: true, title: route.params.nome })}
             />
           </>
         ) : (

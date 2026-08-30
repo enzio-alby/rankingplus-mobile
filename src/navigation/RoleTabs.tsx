@@ -11,6 +11,7 @@ import { ProfDashboardScreen } from '@/screens/professor/DashboardScreen';
 import { ProfTurmasScreen } from '@/screens/professor/TurmasScreen';
 import { TalentosScreen } from '@/screens/empresa/TalentosScreen';
 import { FavoritosScreen } from '@/screens/empresa/FavoritosScreen';
+import { ChatScreen } from '@/screens/ChatScreen';
 import { colors } from '@/theme/tokens';
 
 const Tab = createBottomTabNavigator();
@@ -27,19 +28,21 @@ const TABS: Record<Papel, TabDef[]> = {
     { name: 'AlunoDashboard', titulo: 'Início', icon: 'home', component: DashboardScreen },
     { name: 'AlunoBoletim', titulo: 'Boletim', icon: 'document-text', component: BoletimScreen },
     { name: 'AlunoRanking', titulo: 'Ranking', icon: 'trophy', component: RankingScreen },
+    { name: 'AlunoMensagens', titulo: 'Chat', icon: 'chatbubbles', component: ChatScreen },
     { name: 'AlunoVagas', titulo: 'Vagas', icon: 'briefcase', component: makePlaceholder('Vagas') },
     { name: 'AlunoPerfil', titulo: 'Perfil', icon: 'person', component: MeuPerfilScreen },
   ],
   professor: [
     { name: 'ProfDashboard', titulo: 'Início', icon: 'home', component: ProfDashboardScreen },
     { name: 'ProfTurmas', titulo: 'Turmas', icon: 'people', component: ProfTurmasScreen },
+    { name: 'ProfMensagens', titulo: 'Chat', icon: 'chatbubbles', component: ChatScreen },
     { name: 'ProfPerfil', titulo: 'Perfil', icon: 'person', component: makePlaceholder('Perfil') },
   ],
   empresa: [
     { name: 'EmpTalentos', titulo: 'Talentos', icon: 'search', component: TalentosScreen },
     { name: 'EmpFavoritos', titulo: 'Favoritos', icon: 'star', component: FavoritosScreen },
+    { name: 'EmpMensagens', titulo: 'Chat', icon: 'chatbubbles', component: ChatScreen },
     { name: 'EmpVagas', titulo: 'Vagas', icon: 'briefcase', component: makePlaceholder('Minhas Vagas') },
-    { name: 'EmpMensagens', titulo: 'Mensagens', icon: 'chatbubbles', component: makePlaceholder('Mensagens') },
   ],
 };
 

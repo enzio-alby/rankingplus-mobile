@@ -284,7 +284,7 @@ function CandidatoModal({
                 ))
               )}
             </Card>
-            <Text style={styles.nota}>Mensagens (chat por match): próxima etapa.</Text>
+            <Text style={styles.nota}>Conversas ficam na aba “Chat”.</Text>
           </>
         )}
       </ScrollView>
