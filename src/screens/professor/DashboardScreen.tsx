@@ -6,6 +6,7 @@ import { useSession } from '@/auth/session';
 import { getStatsProfessor, getDisciplinasProfessor, getStatsDisciplinas } from '@/api/professor';
 import { ScreenScroll, Titulo, Card, Estado, StatTile } from '@/components/ui';
 import { FiltroBar, SelectPill } from '@/components/filtro';
+import { AcaoLink } from '@/components/AcaoLink';
 import { BarrasChart } from '@/components/chart';
 import { colors, spacing, radius, typography } from '@/theme/tokens';
 
@@ -112,9 +113,14 @@ export function ProfDashboardScreen() {
         </>
       )}
 
-      <Pressable style={styles.link} onPress={() => nav.navigate('ProfRelatorios')}>
-        <Text style={styles.linkTxt}>Ver relatórios (aulas, horários e desempenho) →</Text>
-      </Pressable>
+      <View style={{ marginTop: spacing.xs }}>
+        <AcaoLink
+          icon="stats-chart"
+          label="Relatórios"
+          descricao="Aulas, horários e desempenho por turma"
+          onPress={() => nav.navigate('ProfRelatorios')}
+        />
+      </View>
 
       <Titulo>Minhas turmas</Titulo>
       <Estado
@@ -152,8 +158,6 @@ const styles = StyleSheet.create({
   sair: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
   sairTxt: { ...typography.small, color: colors.danger, fontWeight: '600' },
   grid: { flexDirection: 'row', gap: spacing.md },
-  link: { paddingVertical: spacing.md },
-  linkTxt: { ...typography.body, color: colors.primary, fontWeight: '600' },
   linha: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   materia: { ...typography.h3, color: colors.text },
   sub: { ...typography.small, color: colors.textMuted, marginTop: 2 },

@@ -6,6 +6,7 @@ import { useSession } from '@/auth/session';
 import { getDashboard, getDesempenho, getFrequenciaDisciplinas } from '@/api/aluno';
 import { ScreenScroll, Titulo, Card, Estado, StatTile } from '@/components/ui';
 import { FiltroBar, SelectPill } from '@/components/filtro';
+import { AcaoLink } from '@/components/AcaoLink';
 import { LinhaChart, BarrasChart } from '@/components/chart';
 import { PERIODOS_DESEMPENHO as PERIODOS, PERIODO_PADRAO } from '@/lib/periodoDesempenho';
 import { colors, spacing, radius, typography } from '@/theme/tokens';
@@ -100,18 +101,30 @@ export function DashboardScreen() {
             </Card>
           )}
 
-          <Pressable style={styles.link} onPress={() => nav.navigate('Relatorios')}>
-            <Text style={styles.linkTxt}>Ver relatórios completos →</Text>
-          </Pressable>
-          <Pressable style={styles.link} onPress={() => nav.navigate('Talentos')}>
-            <Text style={styles.linkTxt}>Ver o Portal de Talentos →</Text>
-          </Pressable>
-          <Pressable style={styles.link} onPress={() => nav.navigate('AlunoBoletim')}>
-            <Text style={styles.linkTxt}>Ver boletim completo →</Text>
-          </Pressable>
-          <Pressable style={styles.link} onPress={() => nav.navigate('AlunoRanking')}>
-            <Text style={styles.linkTxt}>Ver ranking →</Text>
-          </Pressable>
+          <View style={styles.acoes}>
+            <AcaoLink
+              icon="stats-chart"
+              label="Relatórios completos"
+              descricao="Evolução, frequência e menções"
+              onPress={() => nav.navigate('Relatorios')}
+            />
+            <AcaoLink
+              icon="search"
+              label="Portal de Talentos"
+              descricao="Veja como as empresas te encontram"
+              onPress={() => nav.navigate('Talentos')}
+            />
+            <AcaoLink
+              icon="document-text"
+              label="Boletim completo"
+              onPress={() => nav.navigate('AlunoBoletim')}
+            />
+            <AcaoLink
+              icon="trophy"
+              label="Ranking"
+              onPress={() => nav.navigate('AlunoRanking')}
+            />
+          </View>
         </>
       )}
 
@@ -133,8 +146,7 @@ const styles = StyleSheet.create({
   },
   sairTxt: { ...typography.small, color: colors.danger, fontWeight: '600' },
   grid: { flexDirection: 'row', gap: spacing.md },
-  link: { paddingVertical: spacing.md },
-  linkTxt: { ...typography.body, color: colors.primary, fontWeight: '600' },
+  acoes: { gap: spacing.sm, marginTop: spacing.xs },
   termos: { paddingVertical: spacing.lg, alignItems: 'center' },
   termosTxt: { ...typography.small, color: colors.textMuted },
 });

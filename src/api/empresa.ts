@@ -158,6 +158,35 @@ export function getContratacoes(empresaId: number) {
   );
 }
 
+export type InfoContratado = {
+  nome: string;
+  curso: string | null;
+  semestre: number | null;
+  email: string | null;
+  telefone: string | null;
+  linkedin: string | null;
+  github: string | null;
+  vagas: { id: number; titulo: string }[];
+};
+
+/** Dados básicos do aluno contratado + a(s) vaga(s) que ligaram ele à empresa. */
+export async function getInfoContratado(empresaId: number, alunoId: number): Promise<InfoContratado> {
+  const [perfil, vagas] = await Promise.all([
+    getPerfilCandidato(alunoId, empresaId),
+    getVagasDeInteresse(empresaId, alunoId),
+  ]);
+  return {
+    nome: perfil.nome,
+    curso: perfil.curso,
+    semestre: perfil.semestre,
+    email: perfil.email ?? null,
+    telefone: perfil.telefone ?? null,
+    linkedin: perfil.linkedin ?? null,
+    github: perfil.github ?? null,
+    vagas,
+  };
+}
+
 // ─── Favoritos / Kanban ────────────────────────────────────────────────────
 export function getFavoritos(empresaId: number) {
   return comFallback<local.Favorito[]>(

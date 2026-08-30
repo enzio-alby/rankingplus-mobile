@@ -1,9 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Linking, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, radius, typography } from '@/theme/tokens';
+
+const EMAIL_PROJETO = 'admin.rankingplus@gmail.com';
 
 const EQUIPE = [
   { ra: '22303511', nome: 'Enzio Albefaro da Silva' },
@@ -61,6 +63,21 @@ export function SobreScreen() {
           ))}
         </Secao>
 
+        <Secao icone="mail-outline" titulo="Contato">
+          <Text style={styles.p}>E-mail oficial do projeto:</Text>
+          <Pressable
+            onPress={() =>
+              Linking.openURL(`mailto:${EMAIL_PROJETO}`).catch(() =>
+                Alert.alert('E-mail do projeto', EMAIL_PROJETO),
+              )
+            }
+            accessibilityRole="link"
+            accessibilityLabel={`Enviar e-mail para ${EMAIL_PROJETO}`}
+          >
+            <Text style={styles.email}>{EMAIL_PROJETO}</Text>
+          </Pressable>
+        </Secao>
+
         <Text style={styles.rodape}>
           UniCEUB · Ciência da Computação · Projeto Integrador IV · 2026
         </Text>
@@ -106,5 +123,6 @@ const styles = StyleSheet.create({
   membro: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xs },
   membroNome: { ...typography.body, color: colors.text, fontWeight: '600' },
   membroRa: { ...typography.tiny, color: colors.textMuted },
+  email: { ...typography.body, color: colors.primary, fontWeight: '700', textDecorationLine: 'underline', marginTop: 2 },
   rodape: { ...typography.tiny, color: colors.textMuted, textAlign: 'center', paddingVertical: spacing.md },
 });

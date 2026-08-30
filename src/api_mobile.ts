@@ -623,6 +623,8 @@ export type PerfilCandidato = {
   nome: string;
   curso: string | null;
   semestre: number | null;
+  email: string | null;
+  telefone: string | null;
   github: string | null;
   linkedin: string | null;
   metricas: MetricasAluno;
@@ -638,10 +640,12 @@ export async function perfilCandidato(
     nome: string;
     curso: string | null;
     semestre: number | null;
+    email: string | null;
+    telefone: string | null;
     github: string | null;
     linkedin: string | null;
   }>(
-    'SELECT nome, curso, semestre_atual AS semestre, github, linkedin FROM alunos WHERE id = ?',
+    'SELECT nome, curso, semestre_atual AS semestre, email, telefone, github, linkedin FROM alunos WHERE id = ?',
     [alunoId],
   );
   const metricas = await dashboardAluno(alunoId);
@@ -662,6 +666,8 @@ export async function perfilCandidato(
     nome: a?.nome ?? '',
     curso: a?.curso ?? null,
     semestre: a?.semestre ?? null,
+    email: a?.email ?? null,
+    telefone: a?.telefone ?? null,
     github: a?.github ?? null,
     linkedin: a?.linkedin ?? null,
     metricas,
