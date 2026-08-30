@@ -1351,3 +1351,110 @@ export async function salvarPerfilProfissional(
     }
   });
 }
+
+// ─── ALUNO — PERFIL COMPORTAMENTAL (questionário) ────────────────────────
+export type OpcaoPergunta = { id: number; texto: string };
+export type PerguntaComportamental = {
+  id: number;
+  ordem: number;
+  bloco: string;
+  enunciado: string;
+  opcoes: OpcaoPergunta[];
+};
+export type QuestionarioAtivo = {
+  questionario_id: number;
+  nome: string;
+  perguntas: PerguntaComportamental[];
+};
+
+export type ResultadoComportamental = {
+  eixos: {
+    execucao: number;
+    comunicacao: number;
+    colaboracao: number;
+    resiliencia: number;
+    aprendizado: number;
+  };
+  perfis: { executor: number; comunicador: number; planejador: number; analista: number };
+  perfil_dominante: string;
+  respondido_em: string;
+  valido_ate: string;
+};
+export type RespostaAvaliacao = {
+  avaliacao: ResultadoComportamental | null;
+  pode_reavaliar_agora: boolean;
+  proxima_liberacao: string | null;
+};
+
+export async function questionarioAtivo(): Promise<QuestionarioAtivo> {
+  const q = await first<{ id: number; nome: string }>(
+    "SELECT id, nome FROM questionarios_comportamentais WHERE origem='sistema' AND ativo=1 ORDER BY id DESC LIMIT 1",
+  );
+  if (!q) throw new Error('Nenhum questionário ativo.');
+  const perguntas = await all<{ id: number; ordem: number; bloco: string; enunciado: string }>(
+    'SELECT id, ordem, bloco, enunciado FROM perguntas_comportamentais WHERE questionario_id = ? ORDER BY ordem',
+    [q.id],
+  );
+  const opcoes = await all<{ id: number; pergunta_id: number; texto: string }>(
+    `SELECT o.id, o.pergunta_id, o.texto
+       FROM opcoes_resposta o
+       JOIN perguntas_comportamentais p ON p.id = o.pergunta_id
+      WHERE p.questionario_id = ?
+      ORDER BY o.pergunta_id, o.ordem`,
+    [q.id],
+  );
+  const porPergunta = new Map<number, OpcaoPergunta[]>();
+  for (const o of opcoes) {
+    if (!porPergunta.has(o.pergunta_id)) porPergunta.set(o.pergunta_id, []);
+    porPergunta.get(o.pergunta_id)!.push({ id: o.id, texto: o.texto });
+  }
+  return {
+    questionario_id: q.id,
+    nome: q.nome,
+    perguntas: perguntas.map((p) => ({ ...p, opcoes: porPergunta.get(p.id) ?? [] })),
+  };
+}
+
+export async function avaliacaoComportamental(alunoId: number): Promise<RespostaAvaliacao> {
+  const a = await first<{
+    score_execucao: number;
+    score_comunicacao: number;
+    score_colaboracao: number;
+    score_resiliencia: number;
+    score_aprendizado: number;
+    perfil_executor_pct: number;
+    perfil_comunicador_pct: number;
+    perfil_planejador_pct: number;
+    perfil_analista_pct: number;
+    perfil_dominante: string;
+    respondido_em: string;
+    valido_ate: string;
+  }>(
+    'SELECT * FROM avaliacoes_comportamentais WHERE aluno_id = ? ORDER BY respondido_em DESC LIMIT 1',
+    [alunoId],
+  );
+  if (!a) return { avaliacao: null, pode_reavaliar_agora: true, proxima_liberacao: null };
+  const podeReavaliar = new Date(a.valido_ate) <= new Date();
+  return {
+    avaliacao: {
+      eixos: {
+        execucao: a.score_execucao,
+        comunicacao: a.score_comunicacao,
+        colaboracao: a.score_colaboracao,
+        resiliencia: a.score_resiliencia,
+        aprendizado: a.score_aprendizado,
+      },
+      perfis: {
+        executor: a.perfil_executor_pct,
+        comunicador: a.perfil_comunicador_pct,
+        planejador: a.perfil_planejador_pct,
+        analista: a.perfil_analista_pct,
+      },
+      perfil_dominante: a.perfil_dominante,
+      respondido_em: a.respondido_em,
+      valido_ate: a.valido_ate,
+    },
+    pode_reavaliar_agora: podeReavaliar,
+    proxima_liberacao: podeReavaliar ? null : a.valido_ate,
+  };
+}

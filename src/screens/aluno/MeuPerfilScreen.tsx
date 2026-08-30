@@ -169,6 +169,16 @@ export function MeuPerfilScreen() {
             </Pressable>
             <Pressable
               style={styles.linkRow}
+              onPress={() => nav.navigate('PerfilComportamental')}
+              accessibilityRole="button"
+              accessibilityLabel="Abrir perfil comportamental"
+            >
+              <Ionicons name="pulse-outline" size={18} color={colors.textMuted} />
+              <Text style={styles.linkTxt}>Perfil comportamental</Text>
+              <Ionicons name="chevron-forward" size={16} color={colors.textMuted} style={{ marginLeft: 'auto' }} />
+            </Pressable>
+            <Pressable
+              style={styles.linkRow}
               onPress={() => nav.navigate('Termos', { origem: 'app' })}
               accessibilityRole="link"
               accessibilityLabel="Abrir termos e privacidade"

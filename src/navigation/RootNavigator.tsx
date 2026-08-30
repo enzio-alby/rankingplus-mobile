@@ -14,6 +14,7 @@ import { NovaConversaScreen } from '@/screens/NovaConversaScreen';
 import { NotificacoesScreen } from '@/screens/NotificacoesScreen';
 import { RelatoriosScreen } from '@/screens/aluno/RelatoriosScreen';
 import { PerfilAtsScreen } from '@/screens/aluno/PerfilAtsScreen';
+import { PerfilComportamentalScreen } from '@/screens/aluno/PerfilComportamentalScreen';
 import { RelatorioPreviewScreen } from '@/screens/RelatorioPreviewScreen';
 import { TalentosScreen } from '@/screens/empresa/TalentosScreen';
 import { VagaFormScreen } from '@/screens/empresa/VagaFormScreen';
@@ -82,6 +83,11 @@ export function RootNavigator() {
               name="PerfilAts"
               component={PerfilAtsScreen}
               options={{ headerShown: true, title: 'Currículo / Perfil profissional' }}
+            />
+            <Stack.Screen
+              name="PerfilComportamental"
+              component={PerfilComportamentalScreen}
+              options={{ headerShown: true, title: 'Perfil comportamental' }}
             />
             <Stack.Screen
               name="RelatorioPreview"

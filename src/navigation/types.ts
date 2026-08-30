@@ -33,6 +33,7 @@ export type RootStackParamList = {
   Relatorios: undefined;
   Talentos: undefined;
   PerfilAts: undefined;
+  PerfilComportamental: undefined;
   RelatorioPreview: { alunoId: number; nome: string };
   NovaConversa: undefined;
   VagaForm: { vaga?: VagaEmpresa } | undefined;
