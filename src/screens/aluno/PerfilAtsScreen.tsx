@@ -92,10 +92,11 @@ export function PerfilAtsScreen() {
     { label: 'Não informado', value: null as string | null },
     ...(areas.data ?? []).map((a) => ({ label: a.nome, value: String(a.id) })),
   ];
+  // Prioriza o nome da lista carregada (reflete a troca na hora); só cai pro
+  // nome que veio no payload quando a área ainda é a original.
   const areaNome =
-    q.data?.area_interesse_nome ??
     (areas.data ?? []).find((a) => a.id === areaId)?.nome ??
-    null;
+    (areaId === (q.data?.area_interesse_id ?? null) ? q.data?.area_interesse_nome ?? null : null);
 
   function addHabilidade() {
     const h = novaHab.trim();
