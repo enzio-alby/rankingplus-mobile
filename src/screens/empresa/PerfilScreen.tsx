@@ -44,14 +44,16 @@ export function EmpPerfilScreen() {
   const qc = useQueryClient();
   const id = sessao?.id ?? 0;
 
+  const [editando, setEditando] = useState(false);
+
   const q = useQuery({ queryKey: ['emp-interesses', id], queryFn: () => getInteressesEmpresa(id) });
-  const areas = useQuery({ queryKey: ['areas-foco'], queryFn: getAreasFoco });
-  const tipos = useQuery({ queryKey: ['tipos-vaga'], queryFn: getTiposVaga });
+  // Só precisam das listas de domínio ao editar (e normalmente já estão em cache).
+  const areas = useQuery({ queryKey: ['areas-foco'], queryFn: getAreasFoco, enabled: editando });
+  const tipos = useQuery({ queryKey: ['tipos-vaga'], queryFn: getTiposVaga, enabled: editando });
   const vagas = useQuery({ queryKey: ['vagas-emp', id], queryFn: () => getVagasEmpresa(id) });
   const favs = useQuery({ queryKey: ['favoritos', id], queryFn: () => getFavoritos(id) });
   const contr = useQuery({ queryKey: ['contratacoes', id], queryFn: () => getContratacoes(id) });
 
-  const [editando, setEditando] = useState(false);
   const [areaId, setAreaId] = useState<number | null>(null);
   const [tipoId, setTipoId] = useState<number | null>(null);
   const [curso, setCurso] = useState('');
