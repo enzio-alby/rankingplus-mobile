@@ -2,15 +2,18 @@ import React, { type ComponentType } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import type { Papel } from '@/types/api';
-import { makePlaceholder } from '@/screens/common/PlaceholderScreen';
 import { DashboardScreen } from '@/screens/aluno/DashboardScreen';
 import { BoletimScreen } from '@/screens/aluno/BoletimScreen';
 import { RankingScreen } from '@/screens/aluno/RankingScreen';
 import { MeuPerfilScreen } from '@/screens/aluno/MeuPerfilScreen';
+import { VagasScreen } from '@/screens/aluno/VagasScreen';
 import { ProfDashboardScreen } from '@/screens/professor/DashboardScreen';
 import { ProfTurmasScreen } from '@/screens/professor/TurmasScreen';
+import { ProfPerfilScreen } from '@/screens/professor/PerfilScreen';
 import { TalentosScreen } from '@/screens/empresa/TalentosScreen';
 import { FavoritosScreen } from '@/screens/empresa/FavoritosScreen';
+import { EmpVagasScreen } from '@/screens/empresa/VagasScreen';
+import { ContratacoesScreen } from '@/screens/empresa/ContratacoesScreen';
 import { ChatScreen } from '@/screens/ChatScreen';
 import { colors } from '@/theme/tokens';
 
@@ -28,21 +31,22 @@ const TABS: Record<Papel, TabDef[]> = {
     { name: 'AlunoDashboard', titulo: 'Início', icon: 'home', component: DashboardScreen },
     { name: 'AlunoBoletim', titulo: 'Boletim', icon: 'document-text', component: BoletimScreen },
     { name: 'AlunoRanking', titulo: 'Ranking', icon: 'trophy', component: RankingScreen },
+    { name: 'AlunoVagas', titulo: 'Vagas', icon: 'briefcase', component: VagasScreen },
     { name: 'AlunoMensagens', titulo: 'Chat', icon: 'chatbubbles', component: ChatScreen },
-    { name: 'AlunoVagas', titulo: 'Vagas', icon: 'briefcase', component: makePlaceholder('Vagas') },
     { name: 'AlunoPerfil', titulo: 'Perfil', icon: 'person', component: MeuPerfilScreen },
   ],
   professor: [
     { name: 'ProfDashboard', titulo: 'Início', icon: 'home', component: ProfDashboardScreen },
     { name: 'ProfTurmas', titulo: 'Turmas', icon: 'people', component: ProfTurmasScreen },
     { name: 'ProfMensagens', titulo: 'Chat', icon: 'chatbubbles', component: ChatScreen },
-    { name: 'ProfPerfil', titulo: 'Perfil', icon: 'person', component: makePlaceholder('Perfil') },
+    { name: 'ProfPerfil', titulo: 'Perfil', icon: 'person', component: ProfPerfilScreen },
   ],
   empresa: [
     { name: 'EmpTalentos', titulo: 'Talentos', icon: 'search', component: TalentosScreen },
     { name: 'EmpFavoritos', titulo: 'Favoritos', icon: 'star', component: FavoritosScreen },
+    { name: 'EmpVagas', titulo: 'Vagas', icon: 'briefcase', component: EmpVagasScreen },
+    { name: 'EmpContratacoes', titulo: 'Contratações', icon: 'ribbon', component: ContratacoesScreen },
     { name: 'EmpMensagens', titulo: 'Chat', icon: 'chatbubbles', component: ChatScreen },
-    { name: 'EmpVagas', titulo: 'Vagas', icon: 'briefcase', component: makePlaceholder('Minhas Vagas') },
   ],
 };
 

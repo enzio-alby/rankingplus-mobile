@@ -41,6 +41,31 @@ export function getPerfilCandidato(alunoId: number, empresaId: number) {
   );
 }
 
+// ─── Vagas + Contratações ──────────────────────────────────────────────────
+export function getVagasEmpresa(empresaId: number) {
+  return comFallback<local.VagaEmpresa[]>(
+    async () => {
+      const r = await apiFetch<local.VagaEmpresa[] | { vagas?: local.VagaEmpresa[] }>(
+        `/empresas/${empresaId}/vagas`,
+      );
+      return Array.isArray(r) ? r : (r.vagas ?? []);
+    },
+    () => local.vagasDaEmpresa(empresaId),
+  );
+}
+
+export function getContratacoes(empresaId: number) {
+  return comFallback<local.Contratacao[]>(
+    async () => {
+      const r = await apiFetch<local.Contratacao[] | { contratacoes?: local.Contratacao[] }>(
+        `/empresas/${empresaId}/contratacoes`,
+      );
+      return Array.isArray(r) ? r : (r.contratacoes ?? []);
+    },
+    () => local.contratacoes(empresaId),
+  );
+}
+
 // ─── Favoritos / Kanban ────────────────────────────────────────────────────
 export function getFavoritos(empresaId: number) {
   return comFallback<local.Favorito[]>(

@@ -712,3 +712,169 @@ export async function setStatusFavorito(
     );
   }
 }
+
+// ─── ALUNO — VAGAS ────────────────────────────────────────────────────────
+export type VagaAluno = {
+  id: number;
+  titulo: string;
+  descricao: string | null;
+  empresa_nome: string | null;
+  area_foco_nome: string | null;
+  tipo_vaga_nome: string | null;
+  curso_preferido: string | null;
+  semestre_minimo: number | null;
+  tenho_interesse: number;
+  compatibilidade: Compatibilidade | null;
+};
+
+export async function vagasDoAluno(alunoId: number): Promise<VagaAluno[]> {
+  const rows = await all<VagaAluno & { empresa_id: number }>(
+    `SELECT v.id, v.empresa_id, v.titulo, v.descricao, v.curso_preferido, v.semestre_minimo,
+            e.nome_fantasia AS empresa_nome, af.nome AS area_foco_nome, tv.nome AS tipo_vaga_nome,
+            (vi.id IS NOT NULL) AS tenho_interesse
+       FROM empresa_vagas v
+       JOIN empresas e ON e.id = v.empresa_id
+       LEFT JOIN dom_areas_foco af ON v.area_foco_id = af.id
+       LEFT JOIN dom_tipos_vaga tv ON v.tipo_vaga_id = tv.id
+       LEFT JOIN vaga_interesses vi ON vi.vaga_id = v.id AND vi.aluno_id = ?
+      WHERE v.status = 'aberta'
+      ORDER BY v.criado_em DESC`,
+    [alunoId],
+  );
+  const dAl = await dadosCompatAluno(alunoId);
+  return Promise.all(
+    rows.map(async (r) => {
+      const perfis = (
+        await all<{ perfil: string }>(
+          'SELECT perfil FROM empresa_perfis_procurados WHERE empresa_id = ? ORDER BY ordem',
+          [r.empresa_id],
+        )
+      ).map((x) => x.perfil);
+      return {
+        id: r.id,
+        titulo: r.titulo,
+        descricao: r.descricao,
+        empresa_nome: r.empresa_nome,
+        area_foco_nome: r.area_foco_nome,
+        tipo_vaga_nome: r.tipo_vaga_nome,
+        curso_preferido: r.curso_preferido,
+        semestre_minimo: r.semestre_minimo,
+        tenho_interesse: r.tenho_interesse,
+        compatibilidade: calcularCompat(dAl, {
+          area_foco_nome: r.area_foco_nome,
+          curso_preferido: r.curso_preferido,
+          semestre_minimo: r.semestre_minimo,
+          perfis_procurados: perfis,
+        }),
+      };
+    }),
+  );
+}
+
+export async function toggleInteresseVaga(alunoId: number, vagaId: number, ligar: boolean) {
+  if (ligar) {
+    const existe = await first<{ id: number }>(
+      'SELECT id FROM vaga_interesses WHERE vaga_id = ? AND aluno_id = ?',
+      [vagaId, alunoId],
+    );
+    if (!existe) {
+      await run(
+        'INSERT INTO vaga_interesses (vaga_id, aluno_id, criado_em) VALUES (?, ?, ?)',
+        [vagaId, alunoId, new Date().toISOString()],
+      );
+    }
+  } else {
+    await run('DELETE FROM vaga_interesses WHERE vaga_id = ? AND aluno_id = ?', [vagaId, alunoId]);
+  }
+}
+
+// ─── PROFESSOR — PERFIL ──────────────────────────────────────────────────
+export type PerfilProfessor = {
+  id: number;
+  nome: string | null;
+  email: string | null;
+  telefone: string | null;
+  titulacao: string | null;
+  area_atuacao: string | null;
+  turno: string | null;
+  campus: string | null;
+};
+
+export function perfilProfessor(id: number) {
+  return first<PerfilProfessor>(
+    'SELECT id, nome, email, telefone, titulacao, area_atuacao, turno, campus FROM professores WHERE id = ?',
+    [id],
+  );
+}
+
+export type CamposPerfilProfessor = Partial<{
+  nome: string;
+  telefone: string | null;
+  titulacao: string | null;
+  area_atuacao: string | null;
+}>;
+
+export async function atualizarPerfilProfessor(id: number, campos: CamposPerfilProfessor) {
+  const permitido: (keyof CamposPerfilProfessor)[] = ['nome', 'telefone', 'titulacao', 'area_atuacao'];
+  const sets: string[] = [];
+  const vals: (string | null)[] = [];
+  for (const f of permitido) {
+    if (f in campos) {
+      sets.push(`${f} = ?`);
+      const v = campos[f];
+      vals.push(v === undefined || v === '' ? null : (v as string));
+    }
+  }
+  if (!sets.length) return;
+  vals.push(String(id));
+  await run(`UPDATE professores SET ${sets.join(', ')} WHERE id = ?`, vals);
+}
+
+// ─── EMPRESA — VAGAS ─────────────────────────────────────────────────────
+export type VagaEmpresa = {
+  id: number;
+  titulo: string;
+  descricao: string | null;
+  area_foco_nome: string | null;
+  tipo_vaga_nome: string | null;
+  curso_preferido: string | null;
+  semestre_minimo: number | null;
+  status: string;
+  interessados: number;
+};
+
+export function vagasDaEmpresa(empresaId: number) {
+  return all<VagaEmpresa>(
+    `SELECT v.id, v.titulo, v.descricao, v.curso_preferido, v.semestre_minimo, v.status,
+            af.nome AS area_foco_nome, tv.nome AS tipo_vaga_nome,
+            (SELECT COUNT(*) FROM vaga_interesses vi WHERE vi.vaga_id = v.id) AS interessados
+       FROM empresa_vagas v
+       LEFT JOIN dom_areas_foco af ON v.area_foco_id = af.id
+       LEFT JOIN dom_tipos_vaga tv ON v.tipo_vaga_id = tv.id
+      WHERE v.empresa_id = ?
+      ORDER BY v.criado_em DESC`,
+    [empresaId],
+  );
+}
+
+// ─── EMPRESA — CONTRATAÇÕES ──────────────────────────────────────────────
+export type Contratacao = {
+  aluno_id: number;
+  aluno_nome: string;
+  marcado_contratado_em: string | null;
+  proximo_checkin_em: string | null;
+  respondido_em: string | null;
+  continua_na_empresa: number | null;
+};
+
+export function contratacoes(empresaId: number) {
+  return all<Contratacao>(
+    `SELECT c.aluno_id, a.nome AS aluno_nome, c.marcado_contratado_em,
+            c.proximo_checkin_em, c.respondido_em, c.continua_na_empresa
+       FROM contratacoes_checkins c
+       JOIN alunos a ON a.id = c.aluno_id
+      WHERE c.empresa_id = ?
+      ORDER BY c.marcado_contratado_em DESC`,
+    [empresaId],
+  );
+}

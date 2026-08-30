@@ -33,6 +33,34 @@ export function getStatsDisciplinas(profId: number) {
   );
 }
 
+export function getPerfilProfessor(id: number) {
+  return comFallback<local.PerfilProfessor | null>(
+    async () => {
+      const p = await apiFetch<Record<string, unknown>>(`/professores/${id}`);
+      return {
+        id: Number(p.id),
+        nome: (p.nome as string) ?? null,
+        email: (p.email as string) ?? null,
+        telefone: (p.telefone as string) ?? null,
+        titulacao: (p.titulacao as string) ?? null,
+        area_atuacao: (p.area_atuacao as string) ?? null,
+        turno: (p.turno as string) ?? null,
+        campus: (p.campus as string) ?? null,
+      };
+    },
+    () => local.perfilProfessor(id),
+  );
+}
+
+export function salvarPerfilProfessor(id: number, campos: local.CamposPerfilProfessor) {
+  return comFallback<void>(
+    async () => {
+      await apiFetch(`/professores/${id}`, { method: 'PUT', body: campos });
+    },
+    () => local.atualizarPerfilProfessor(id, campos),
+  );
+}
+
 export function salvarLancamento(
   profId: number,
   discId: number,

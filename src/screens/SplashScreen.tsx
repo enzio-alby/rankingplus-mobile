@@ -10,6 +10,12 @@ import { colors, spacing, radius, typography } from '@/theme/tokens';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Splash'>;
 
+const DESTAQUES: { icon: keyof typeof Ionicons.glyphMap; texto: string }[] = [
+  { icon: 'trophy', texto: 'Ranking acadêmico' },
+  { icon: 'search', texto: 'Portal de talentos' },
+  { icon: 'sparkles', texto: 'Perfil comportamental' },
+];
+
 export function SplashScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
 
@@ -25,26 +31,39 @@ export function SplashScreen({ navigation }: Props) {
   const google = useGoogleLogin(irParaDemo);
 
   function entrarComGoogle() {
-    if (google.disponivel) {
-      void google.entrar();
-    } else {
-      // Sem OAuth configurado / rodando no Expo Go → fluxo mock.
-      irParaDemo({ nome: 'Usuario', email: '' });
-    }
+    if (google.disponivel) void google.entrar();
+    else irParaDemo({ nome: 'Usuario', email: '' });
   }
 
   return (
     <LinearGradient
-      colors={[colors.primary, '#1a1a3e']}
+      colors={['#05051f', colors.primary, '#241f52']}
+      locations={[0, 0.55, 1]}
       style={[styles.fill, { paddingTop: insets.top, paddingBottom: insets.bottom }]}
     >
+      {/* halos decorativos — puro shape, sem asset */}
+      <View pointerEvents="none" style={[styles.halo, styles.haloAccent]} />
+      <View pointerEvents="none" style={[styles.halo, styles.haloLight]} />
+
       <View style={styles.center}>
-        <Text style={styles.logo}>
-          RANKING<Text style={{ color: colors.accent }}>+</Text>
-        </Text>
+        <View style={styles.logoWrap}>
+          <Text style={styles.logo}>
+            RANKING<Text style={{ color: colors.accent }}>+</Text>
+          </Text>
+          <View style={styles.underline} />
+        </View>
         <Text style={styles.tagline}>
           Seu desempenho acadêmico como ativo de carreira.
         </Text>
+
+        <View style={styles.destaques}>
+          {DESTAQUES.map((d) => (
+            <View key={d.texto} style={styles.destaque}>
+              <Ionicons name={d.icon} size={16} color={colors.accent} />
+              <Text style={styles.destaqueTxt}>{d.texto}</Text>
+            </View>
+          ))}
+        </View>
       </View>
 
       <View style={styles.actions}>
@@ -78,16 +97,34 @@ export function SplashScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  fill: { flex: 1 },
+  fill: { flex: 1, overflow: 'hidden' },
+  halo: { position: 'absolute', borderRadius: 999 },
+  haloAccent: {
+    width: 340, height: 340, top: -120, right: -110,
+    backgroundColor: colors.accent, opacity: 0.14,
+  },
+  haloLight: {
+    width: 260, height: 260, bottom: 40, left: -120,
+    backgroundColor: '#fff', opacity: 0.05,
+  },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
-  logo: { fontSize: 44, fontWeight: '800', color: colors.textOnPrimary, letterSpacing: 1 },
+  logoWrap: { alignItems: 'center' },
+  logo: { fontSize: 46, fontWeight: '800', color: colors.textOnPrimary, letterSpacing: 1.5 },
+  underline: {
+    width: 54, height: 4, borderRadius: 2, backgroundColor: colors.accent,
+    marginTop: spacing.sm,
+  },
   tagline: {
     ...typography.body,
-    color: 'rgba(255,255,255,0.75)',
+    color: 'rgba(255,255,255,0.78)',
     textAlign: 'center',
-    marginTop: spacing.md,
-    maxWidth: 280,
+    marginTop: spacing.lg,
+    maxWidth: 290,
+    lineHeight: 22,
   },
+  destaques: { marginTop: spacing.xl, gap: spacing.sm },
+  destaque: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  destaqueTxt: { ...typography.small, color: 'rgba(255,255,255,0.72)' },
   actions: { padding: spacing.xl, gap: spacing.sm },
   googleBtn: {
     flexDirection: 'row',

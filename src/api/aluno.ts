@@ -27,6 +27,24 @@ export function getBoletim(alunoId: number) {
   );
 }
 
+// ─── Vagas ─────────────────────────────────────────────────────────────────
+export function getVagas(alunoId: number) {
+  return comFallback<local.VagaAluno[]>(
+    () => apiFetch(`/alunos/${alunoId}/vagas`),
+    () => local.vagasDoAluno(alunoId),
+  );
+}
+
+export function toggleInteresse(alunoId: number, vagaId: number, ligar: boolean) {
+  return comFallback<unknown>(
+    () =>
+      apiFetch(`/alunos/${alunoId}/vagas/${vagaId}/interesse`, {
+        method: ligar ? 'POST' : 'DELETE',
+      }),
+    () => local.toggleInteresseVaga(alunoId, vagaId, ligar),
+  );
+}
+
 // ─── Meu Perfil (ver + editar) ─────────────────────────────────────────────
 export function getMeuPerfil(alunoId: number) {
   return comFallback<local.MeuPerfil | null>(
