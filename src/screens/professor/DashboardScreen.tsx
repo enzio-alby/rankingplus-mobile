@@ -3,9 +3,12 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import { useSession } from '@/auth/session';
-import { getStatsProfessor, getDisciplinasProfessor } from '@/api/professor';
+import { getStatsProfessor, getDisciplinasProfessor, getStatsDisciplinas } from '@/api/professor';
 import { ScreenScroll, Titulo, Card, Estado, StatTile } from '@/components/ui';
+import { BarrasChart } from '@/components/chart';
 import { colors, spacing, radius, typography } from '@/theme/tokens';
+
+const CORES_MENCAO = [colors.success, '#65A30D', colors.warning, '#EA580C', colors.danger];
 
 export function ProfDashboardScreen() {
   const { sessao, sair } = useSession();
@@ -13,15 +16,25 @@ export function ProfDashboardScreen() {
   const id = sessao?.id ?? 0;
   const stats = useQuery({ queryKey: ['prof-stats', id], queryFn: () => getStatsProfessor(id) });
   const discs = useQuery({ queryKey: ['prof-discs', id], queryFn: () => getDisciplinasProfessor(id) });
+  const dstats = useQuery({ queryKey: ['prof-dstats', id], queryFn: () => getStatsDisciplinas(id) });
   const s = stats.data;
+
+  const mencTotais = (dstats.data ?? []).reduce(
+    (acc, d) => [
+      acc[0] + Number(d.cnt_ss || 0), acc[1] + Number(d.cnt_ms || 0), acc[2] + Number(d.cnt_mm || 0),
+      acc[3] + Number(d.cnt_mi || 0), acc[4] + Number(d.cnt_ii || 0),
+    ],
+    [0, 0, 0, 0, 0],
+  );
 
   return (
     <ScreenScroll
       onRefresh={() => {
         stats.refetch();
         discs.refetch();
+        dstats.refetch();
       }}
-      refreshing={stats.isRefetching || discs.isRefetching}
+      refreshing={stats.isRefetching || discs.isRefetching || dstats.isRefetching}
     >
       <View style={styles.top}>
         <View>
@@ -50,6 +63,28 @@ export function ProfDashboardScreen() {
               cor={Number(s.presenca_media) >= 75 ? colors.success : colors.danger}
             />
           </View>
+        </>
+      )}
+
+      {dstats.data && dstats.data.length > 0 && (
+        <>
+          <Card>
+            <BarrasChart
+              titulo="Média por disciplina"
+              labels={dstats.data.map((d) => d.nome_materia.split(' ')[0])}
+              values={dstats.data.map((d) => Number(d.media ?? 0))}
+            />
+          </Card>
+          {mencTotais.some((n) => n > 0) && (
+            <Card>
+              <BarrasChart
+                titulo="Distribuição de menções (todas as turmas)"
+                labels={['SS', 'MS', 'MM', 'MI', 'II']}
+                values={mencTotais}
+                cores={CORES_MENCAO}
+              />
+            </Card>
+          )}
         </>
       )}
 

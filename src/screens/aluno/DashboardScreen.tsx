@@ -3,8 +3,9 @@ import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import { useSession } from '@/auth/session';
-import { getDashboard } from '@/api/aluno';
-import { ScreenScroll, Titulo, Estado, StatTile } from '@/components/ui';
+import { getDashboard, getDesempenho } from '@/api/aluno';
+import { ScreenScroll, Titulo, Card, Estado, StatTile } from '@/components/ui';
+import { LinhaChart } from '@/components/chart';
 import { colors, spacing, radius, typography } from '@/theme/tokens';
 
 export function DashboardScreen() {
@@ -12,6 +13,7 @@ export function DashboardScreen() {
   const nav = useNavigation<any>();
   const id = sessao?.id ?? 0;
   const q = useQuery({ queryKey: ['dashboard', id], queryFn: () => getDashboard(id) });
+  const desemp = useQuery({ queryKey: ['desempenho', id], queryFn: () => getDesempenho(id) });
   const m = q.data;
 
   return (
@@ -58,6 +60,16 @@ export function DashboardScreen() {
               cor={m.total_faltas > 5 ? colors.danger : colors.text}
             />
           </View>
+
+          {desemp.data && desemp.data.values.length > 1 && (
+            <Card>
+              <LinhaChart
+                titulo="Evolução das notas (por semestre)"
+                labels={desemp.data.labels}
+                values={desemp.data.values}
+              />
+            </Card>
+          )}
 
           <Pressable style={styles.link} onPress={() => nav.navigate('AlunoBoletim')}>
             <Text style={styles.linkTxt}>Ver boletim completo →</Text>

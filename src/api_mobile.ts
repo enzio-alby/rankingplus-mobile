@@ -41,6 +41,24 @@ export async function boletimDetalhado(alunoId: number): Promise<DisciplinaBolet
   );
 }
 
+// ─── ALUNO — DESEMPENHO POR SEMESTRE (gráfico) ─────────────────────────────
+export type SerieDesempenho = { labels: string[]; values: number[] };
+
+export async function desempenhoSemestral(alunoId: number): Promise<SerieDesempenho> {
+  const rows = await all<{ sem: string; media: number }>(
+    `SELECT semestre_cursado AS sem, ROUND(AVG(${NOTA('mencao')}), 1) AS media
+       FROM boletim
+      WHERE aluno_id = ? AND semestre_cursado IS NOT NULL
+      GROUP BY semestre_cursado
+      ORDER BY semestre_cursado ASC`,
+    [alunoId],
+  );
+  return {
+    labels: rows.map((r) => String(r.sem).slice(2)),
+    values: rows.map((r) => Number(r.media)),
+  };
+}
+
 // ─── RANKING ────────────────────────────────────────────────────────────────
 export type AlunoRanking = {
   id: number;
@@ -170,6 +188,34 @@ export function disciplinasProfessor(profId: number) {
             COUNT(DISTINCT b.aluno_id) AS total_alunos
        FROM disciplinas d
        LEFT JOIN boletim b ON b.disciplina_id = d.id
+      WHERE d.professor_id = ?
+      GROUP BY d.id
+      ORDER BY d.nome_materia`, [profId],
+  );
+}
+
+export type StatDisciplina = {
+  id: number;
+  nome_materia: string;
+  total_alunos: number;
+  media: number | null;
+  frequencia: number | null;
+  cnt_ss: number; cnt_ms: number; cnt_mm: number; cnt_mi: number; cnt_ii: number;
+};
+
+export function statsDisciplinasProfessor(profId: number) {
+  return all<StatDisciplina>(
+    `SELECT d.id, d.nome_materia,
+            COUNT(b.aluno_id) AS total_alunos,
+            ROUND(AVG(${NOTA('b.mencao')}), 1) AS media,
+            MAX(0, ROUND(100 - AVG(CAST(b.faltas AS REAL)) * 2, 0)) AS frequencia,
+            SUM(CASE WHEN b.mencao = 'SS' THEN 1 ELSE 0 END) AS cnt_ss,
+            SUM(CASE WHEN b.mencao = 'MS' THEN 1 ELSE 0 END) AS cnt_ms,
+            SUM(CASE WHEN b.mencao = 'MM' THEN 1 ELSE 0 END) AS cnt_mm,
+            SUM(CASE WHEN b.mencao = 'MI' THEN 1 ELSE 0 END) AS cnt_mi,
+            SUM(CASE WHEN b.mencao = 'II' THEN 1 ELSE 0 END) AS cnt_ii
+       FROM disciplinas d
+       LEFT JOIN boletim b ON d.id = b.disciplina_id
       WHERE d.professor_id = ?
       GROUP BY d.id
       ORDER BY d.nome_materia`, [profId],

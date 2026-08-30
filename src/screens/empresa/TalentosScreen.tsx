@@ -4,7 +4,9 @@ import { useQuery } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSession } from '@/auth/session';
 import { getTalentos, getPerfilCandidato } from '@/api/empresa';
+import { getDesempenho } from '@/api/aluno';
 import { ScreenScroll, Titulo, Card, Estado, StatTile } from '@/components/ui';
+import { LinhaChart } from '@/components/chart';
 import { colors, spacing, radius, typography } from '@/theme/tokens';
 import type { Compatibilidade } from '@/api_mobile';
 
@@ -84,6 +86,11 @@ function CandidatoModal({
     queryFn: () => getPerfilCandidato(alunoId as number, empresaId),
     enabled: alunoId != null,
   });
+  const desemp = useQuery({
+    queryKey: ['candidato-desemp', alunoId],
+    queryFn: () => getDesempenho(alunoId as number),
+    enabled: alunoId != null,
+  });
   const d = q.data;
 
   return (
@@ -117,6 +124,16 @@ function CandidatoModal({
                 cor={colors.accent}
               />
             </View>
+
+            {desemp.data && desemp.data.values.length > 1 && (
+              <Card>
+                <LinhaChart
+                  titulo="Evolução das notas"
+                  labels={desemp.data.labels}
+                  values={desemp.data.values}
+                />
+              </Card>
+            )}
 
             <Card>
               <Text style={styles.secTitulo}>Disciplinas de destaque</Text>

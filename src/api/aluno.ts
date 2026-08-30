@@ -27,6 +27,19 @@ export function getBoletim(alunoId: number) {
   );
 }
 
+// ─── Desempenho por semestre (gráfico) ─────────────────────────────────────
+export function getDesempenho(alunoId: number) {
+  return comFallback<local.SerieDesempenho>(
+    async () => {
+      const r = await apiFetch<{ labels?: string[]; values?: number[] }>(
+        `/alunos/${alunoId}/desempenho-semestral?filtro=completo`,
+      );
+      return { labels: r.labels ?? [], values: (r.values ?? []).map(Number) };
+    },
+    () => local.desempenhoSemestral(alunoId),
+  );
+}
+
 // ─── Ranking ────────────────────────────────────────────────────────────────
 export function getRanking() {
   return comFallback<local.AlunoRanking[]>(

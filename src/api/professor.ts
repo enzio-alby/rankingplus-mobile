@@ -26,6 +26,13 @@ export function getDisciplinasProfessor(profId: number) {
   );
 }
 
+export function getStatsDisciplinas(profId: number) {
+  return comFallback<local.StatDisciplina[]>(
+    () => apiFetch(`/professores/${profId}/disciplinas/stats`),
+    () => local.statsDisciplinasProfessor(profId),
+  );
+}
+
 export async function getAlunosDaDisciplina(profId: number, discId: number) {
   const rows = await comFallback<local.AlunoDaTurma[]>(
     () => apiFetch(`/professores/${profId}/disciplinas/${discId}/alunos`),
