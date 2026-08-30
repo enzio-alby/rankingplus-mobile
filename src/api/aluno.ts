@@ -41,21 +41,42 @@ export function getDesempenho(alunoId: number) {
 }
 
 // ─── Ranking ────────────────────────────────────────────────────────────────
-export function getRanking() {
+export function getRanking(f: local.FiltroRanking = {}) {
   return comFallback<local.AlunoRanking[]>(
     async () => {
-      const r = await apiFetch<{ alunos?: local.AlunoRanking[] }>('/ranking/detalhado');
-      const arr = (r.alunos ?? []) as (local.AlunoRanking & {
-        permitir_exibicao_ranking?: number;
-      })[];
-      // anonimiza opt-out no cliente (o /ranking/detalhado não anonimiza)
+      const qs = new URLSearchParams();
+      if (f.curso) qs.set('curso', String(f.curso));
+      if (f.semestre) qs.set('semestre', String(f.semestre));
+      if (f.disciplinaId) qs.set('disciplina_id', String(f.disciplinaId));
+      const r = await apiFetch<{ alunos?: local.AlunoRanking[] }>(
+        `/ranking/detalhado${qs.toString() ? `?${qs}` : ''}`,
+      );
+      const arr = (r.alunos ?? []) as (local.AlunoRanking & { permitir_exibicao_ranking?: number })[];
       return arr.map((a) => ({
         ...a,
         publico: a.permitir_exibicao_ranking ?? a.publico ?? 1,
         nome: (a.permitir_exibicao_ranking ?? 1) === 1 ? a.nome : 'Aluno Anônimo',
       }));
     },
-    () => local.ranking(),
+    () => local.ranking(f),
+  );
+}
+
+export function getFiltros() {
+  return comFallback(
+    async () => {
+      const r = await apiFetch<{
+        cursos?: string[];
+        semestres?: (string | number)[];
+        disciplinas?: { id: number; nome_materia: string }[];
+      }>('/talentos/filtros');
+      return {
+        cursos: r.cursos ?? [],
+        semestres: (r.semestres ?? []).map(Number),
+        disciplinas: r.disciplinas ?? [],
+      };
+    },
+    () => local.filtrosDisponiveis(),
   );
 }
 

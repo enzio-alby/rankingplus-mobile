@@ -70,9 +70,21 @@ export type AlunoRanking = {
   publico: number;
 };
 
-export async function ranking(): Promise<AlunoRanking[]> {
-  // Mesma fórmula do `/ranking/detalhado` do web: frequência por SUM de faltas,
-  // não AVG. Anonimização LGPD (opt-out) feita aqui como no `/ranking`.
+export type FiltroRanking = {
+  curso?: string | null;
+  semestre?: string | number | null;
+  disciplinaId?: string | number | null;
+};
+
+export async function ranking(f: FiltroRanking = {}): Promise<AlunoRanking[]> {
+  // Mesma fórmula do `/ranking/detalhado` do web: frequência por SUM de faltas.
+  const cond: string[] = [];
+  const params: (string | number)[] = [];
+  if (f.curso) { cond.push('a.curso = ?'); params.push(f.curso); }
+  if (f.semestre) { cond.push('a.semestre_atual = ?'); params.push(Number(f.semestre)); }
+  if (f.disciplinaId) { cond.push('b.disciplina_id = ?'); params.push(Number(f.disciplinaId)); }
+  const where = cond.length ? `WHERE ${cond.join(' AND ')}` : '';
+
   return all<AlunoRanking>(
     `SELECT a.id, a.curso, a.semestre_atual,
             COALESCE(a.permitir_exibicao_ranking, 1) AS publico,
@@ -81,10 +93,26 @@ export async function ranking(): Promise<AlunoRanking[]> {
             MAX(0, ROUND(100 - SUM(CAST(b.faltas AS REAL)) * 2, 0)) AS frequencia
        FROM alunos a
        JOIN boletim b ON a.id = b.aluno_id
+      ${where}
       GROUP BY a.id
       ORDER BY pontuacao DESC, frequencia DESC,
                SUM(b.atividades_entregues) DESC, a.nome ASC`,
+    params,
   );
+}
+
+// ─── FILTROS DISPONÍVEIS (dropdowns) ───────────────────────────────────────
+export async function filtrosDisponiveis() {
+  const cursos = (await all<{ c: string }>(
+    `SELECT DISTINCT curso AS c FROM alunos WHERE curso IS NOT NULL ORDER BY curso`,
+  )).map((r) => r.c);
+  const semestres = (await all<{ s: number }>(
+    `SELECT DISTINCT semestre_atual AS s FROM alunos WHERE semestre_atual IS NOT NULL ORDER BY semestre_atual`,
+  )).map((r) => r.s);
+  const disciplinas = await all<{ id: number; nome_materia: string }>(
+    `SELECT id, nome_materia FROM disciplinas ORDER BY nome_materia`,
+  );
+  return { cursos, semestres, disciplinas };
 }
 
 // ─── ALUNO — DASHBOARD (métricas + posição) ─────────────────────────────────
@@ -424,7 +452,26 @@ export type Talento = {
   compatibilidade: Compatibilidade | null;
 };
 
-export async function talentos(empresaId?: number): Promise<Talento[]> {
+export type FiltroTalentos = {
+  curso?: string | null;
+  semestreMin?: string | number | null;
+  habilidade?: string | null;
+  craMin?: string | number | null;
+};
+
+export async function talentos(empresaId?: number, f: FiltroTalentos = {}): Promise<Talento[]> {
+  const cond = ['COALESCE(a.permitir_exibicao_ranking, 1) = 1'];
+  const params: (string | number)[] = [];
+  if (f.curso) { cond.push('a.curso = ?'); params.push(f.curso); }
+  if (f.semestreMin) { cond.push('a.semestre_atual >= ?'); params.push(Number(f.semestreMin)); }
+  // habilidade = destaque (>8.5) numa disciplina cujo nome casa
+  let having = '';
+  if (f.habilidade) {
+    cond.push('d.nome_materia LIKE ?');
+    params.push(`%${f.habilidade}%`);
+    having = 'HAVING media_disc > 8.5';
+  }
+
   const base = await all<{
     id: number;
     nome: string;
@@ -432,17 +479,28 @@ export async function talentos(empresaId?: number): Promise<Talento[]> {
     semestre: number | null;
     media_geral: number | null;
   }>(
+    // media_geral = CRA REAL do aluno (subquery, ignora o filtro de disciplina);
+    // media_disc = média só nas disciplinas que casam a habilidade (pro HAVING).
     `SELECT a.id, a.nome, a.curso, a.semestre_atual AS semestre,
-            ROUND(AVG(${NOTA('b.mencao')}), 1) AS media_geral
-       FROM alunos a JOIN boletim b ON a.id = b.aluno_id
-      WHERE COALESCE(a.permitir_exibicao_ranking, 1) = 1
+            (SELECT ROUND(AVG(${NOTA('b2.mencao')}), 1) FROM boletim b2 WHERE b2.aluno_id = a.id) AS media_geral,
+            ROUND(AVG(${NOTA('b.mencao')}), 2) AS media_disc
+       FROM alunos a
+       JOIN boletim b ON a.id = b.aluno_id
+       JOIN disciplinas d ON b.disciplina_id = d.id
+      WHERE ${cond.join(' AND ')}
       GROUP BY a.id
+      ${having}
       ORDER BY media_geral DESC`,
+    params,
   );
+  const craMin = Number(f.craMin);
+  const filtrada = Number.isFinite(craMin) && craMin > 0
+    ? base.filter((t) => Number(t.media_geral ?? 0) >= craMin)
+    : base;
   const alvo = empresaId ? await alvoDaEmpresa(empresaId) : null;
 
   const out: Talento[] = [];
-  for (const t of base) {
+  for (const t of filtrada) {
     const fortes = await all<{ disciplina: string; media: number }>(
       `SELECT d.nome_materia AS disciplina, ROUND(AVG(${NOTA('b.mencao')}), 1) AS media
          FROM boletim b JOIN disciplinas d ON b.disciplina_id = d.id
@@ -453,7 +511,10 @@ export async function talentos(empresaId?: number): Promise<Talento[]> {
     );
     let compat: Compatibilidade | null = null;
     if (alvo) compat = calcularCompat(await dadosCompatAluno(t.id), alvo);
-    out.push({ ...t, pontos_fortes: fortes, compatibilidade: compat });
+    out.push({
+      id: t.id, nome: t.nome, curso: t.curso, semestre: t.semestre,
+      media_geral: t.media_geral, pontos_fortes: fortes, compatibilidade: compat,
+    });
   }
   return out;
 }

@@ -13,13 +13,24 @@ async function comFallback<T>(viaApi: () => Promise<T>, viaLocal: () => Promise<
 }
 
 /** Portal de Talentos — lista de candidatos com % de compatibilidade. */
-export function getTalentos(empresaId: number) {
+export function getTalentos(empresaId: number, f: local.FiltroTalentos = {}) {
   return comFallback<local.Talento[]>(
     async () => {
-      const r = await apiFetch<{ talentos?: local.Talento[] }>(`/talentos/buscar`);
-      return (r.talentos ?? []) as local.Talento[];
+      const qs = new URLSearchParams();
+      if (f.curso) qs.set('curso', String(f.curso));
+      if (f.semestreMin) qs.set('semestre_min', String(f.semestreMin));
+      if (f.habilidade) qs.set('habilidade', String(f.habilidade));
+      const r = await apiFetch<{ talentos?: local.Talento[] }>(
+        `/talentos/buscar${qs.toString() ? `?${qs}` : ''}`,
+      );
+      let arr = (r.talentos ?? []) as local.Talento[];
+      const craMin = Number(f.craMin);
+      if (Number.isFinite(craMin) && craMin > 0) {
+        arr = arr.filter((t) => Number(t.media_geral ?? 0) >= craMin);
+      }
+      return arr;
     },
-    () => local.talentos(empresaId),
+    () => local.talentos(empresaId, f),
   );
 }
 

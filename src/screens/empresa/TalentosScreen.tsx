@@ -4,9 +4,10 @@ import { useQuery } from '@tanstack/react-query';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSession } from '@/auth/session';
 import { getTalentos, getPerfilCandidato } from '@/api/empresa';
-import { getDesempenho } from '@/api/aluno';
+import { getDesempenho, getFiltros } from '@/api/aluno';
 import { ScreenScroll, Titulo, Card, Estado, StatTile } from '@/components/ui';
 import { LinhaChart } from '@/components/chart';
+import { FiltroBar, SelectPill } from '@/components/filtro';
 import { colors, spacing, radius, typography } from '@/theme/tokens';
 import type { Compatibilidade } from '@/api_mobile';
 
@@ -14,17 +15,82 @@ function corFaixa(f?: string) {
   return f === 'alta' ? colors.compatAlta : f === 'media' ? colors.compatMedia : colors.compatBaixa;
 }
 
+const CRA_OPCOES = [
+  { label: 'CRA mín.', value: null },
+  { label: 'CRA ≥ 7', value: '7' },
+  { label: 'CRA ≥ 8', value: '8' },
+  { label: 'CRA ≥ 8.5', value: '8.5' },
+  { label: 'CRA ≥ 9', value: '9' },
+];
+
 export function TalentosScreen() {
-  const { sessao } = useSession();
+  const { sessao, sair } = useSession();
   const empId = sessao?.id ?? 0;
-  const q = useQuery({ queryKey: ['talentos', empId], queryFn: () => getTalentos(empId) });
+
+  const [curso, setCurso] = useState<string | null>(null);
+  const [sem, setSem] = useState<string | null>(null);
+  const [hab, setHab] = useState<string | null>(null);
+  const [cra, setCra] = useState<string | null>(null);
+
+  const filtros = useQuery({ queryKey: ['filtros'], queryFn: getFiltros });
+  const q = useQuery({
+    queryKey: ['talentos', empId, curso, sem, hab, cra],
+    queryFn: () => getTalentos(empId, { curso, semestreMin: sem, habilidade: hab, craMin: cra }),
+  });
   const [sel, setSel] = useState<number | null>(null);
+  const temFiltro = !!(curso || sem || hab || cra);
 
   return (
     <>
       <ScreenScroll onRefresh={q.refetch} refreshing={q.isRefetching}>
+        <View style={styles.top}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.emp}>{sessao?.nome}</Text>
+            {sessao?.demo && <Text style={styles.demo}>modo demonstração</Text>}
+          </View>
+          <Pressable onPress={() => void sair()} style={styles.sairBtn}>
+            <Text style={styles.sairTxt}>Sair</Text>
+          </Pressable>
+        </View>
+
         <Titulo>Portal de Talentos</Titulo>
         <Text style={styles.sub}>Candidatos com desempenho acadêmico verificado.</Text>
+
+        <FiltroBar>
+          <SelectPill
+            label="Curso"
+            value={curso}
+            onChange={setCurso}
+            options={[{ label: 'Todos os cursos', value: null }, ...(filtros.data?.cursos ?? []).map((c) => ({ label: c, value: c }))]}
+          />
+          <SelectPill
+            label="Semestre mín."
+            value={sem}
+            onChange={setSem}
+            options={[{ label: 'Qualquer', value: null }, ...(filtros.data?.semestres ?? []).map((s) => ({ label: `${s}º+`, value: String(s) }))]}
+          />
+          <SelectPill
+            label="Habilidade"
+            value={hab}
+            onChange={setHab}
+            options={[{ label: 'Qualquer', value: null }, ...(filtros.data?.disciplinas ?? []).map((d) => ({ label: d.nome_materia, value: d.nome_materia }))]}
+          />
+          <SelectPill label="CRA mín." value={cra} onChange={setCra} options={CRA_OPCOES} />
+          {temFiltro && (
+            <Pressable
+              style={styles.limpar}
+              onPress={() => {
+                setCurso(null);
+                setSem(null);
+                setHab(null);
+                setCra(null);
+              }}
+            >
+              <Text style={styles.limparTxt}>Limpar</Text>
+            </Pressable>
+          )}
+        </FiltroBar>
+
         <Estado
           carregando={q.isLoading}
           erro={q.isError ? 'Erro ao carregar candidatos.' : null}
@@ -175,6 +241,13 @@ function CompatCard({ c }: { c: Compatibilidade }) {
 }
 
 const styles = StyleSheet.create({
+  top: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },
+  emp: { ...typography.h3, color: colors.text },
+  demo: { ...typography.tiny, color: colors.accent, fontWeight: '700' },
+  sairBtn: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
+  sairTxt: { ...typography.small, color: colors.danger, fontWeight: '600' },
+  limpar: { borderRadius: radius.pill, paddingHorizontal: spacing.md, paddingVertical: 7, justifyContent: 'center' },
+  limparTxt: { ...typography.small, color: colors.danger, fontWeight: '600' },
   sub: { ...typography.small, color: colors.textMuted, marginTop: 2 },
   linha: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   nome: { ...typography.h3, color: colors.text },
