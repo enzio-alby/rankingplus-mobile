@@ -12,8 +12,10 @@ export async function baixarEAbrirAnexo(anexoId: number, nomeArquivo: string): P
   const token = getToken();
   if (!token) throw new Error('Sessão necessária para baixar anexos.');
 
-  const nomeSeguro = (nomeArquivo || `anexo-${anexoId}.pdf`).replace(/[^\w.\- ]+/g, '_');
-  const destino = new File(Paths.cache, nomeSeguro);
+  // Prefixa com o id do anexo: dois PDFs com o mesmo nome_original não colidem
+  // no cache, e o nome continua legível na folha de compartilhamento.
+  const base = (nomeArquivo || 'anexo.pdf').replace(/[^\w.\- ]+/g, '_');
+  const destino = new File(Paths.cache, `${anexoId}-${base}`);
   if (destino.exists) destino.delete();
 
   await File.downloadFileAsync(`${API_URL}/chat/anexos/${anexoId}/download`, destino, {
@@ -24,7 +26,7 @@ export async function baixarEAbrirAnexo(anexoId: number, nomeArquivo: string): P
     await Sharing.shareAsync(destino.uri, {
       mimeType: 'application/pdf',
       UTI: 'com.adobe.pdf',
-      dialogTitle: nomeSeguro,
+      dialogTitle: base,
     });
   }
 }
