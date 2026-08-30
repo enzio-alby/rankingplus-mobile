@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, TextInput, Pressable, ActivityIndicator,
+  View, Text, StyleSheet, TextInput, Pressable, ActivityIndicator, Alert,
   KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -29,8 +30,24 @@ export function LoginEmailScreen({ navigation }: Props) {
   const [papel, setPapel] = useState<Papel>('aluno');
   const [identificador, setIdentificador] = useState('');
   const [senha, setSenha] = useState('');
+  const [mostrarSenha, setMostrarSenha] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+
+  function esqueciSenha() {
+    const alvo = identificador.trim();
+    if (!alvo) {
+      Alert.alert(
+        'Esqueceu a senha?',
+        'Informe seu e-mail (ou matrícula) no campo acima e toque de novo em “Esqueceu a senha?”.',
+      );
+      return;
+    }
+    Alert.alert(
+      'Redefinição de senha',
+      `Se houver uma conta para "${alvo}", enviaremos as instruções de redefinição para o e-mail cadastrado.\n\n(No app este passo é simulado — a redefinição é concluída pelo site do Ranking+.)`,
+    );
+  }
 
   async function entrarAcao() {
     if (!identificador.trim() || !senha) {
@@ -114,14 +131,38 @@ export function LoginEmailScreen({ navigation }: Props) {
           />
 
           <Text style={styles.label}>Senha</Text>
-          <TextInput
-            style={styles.input}
-            secureTextEntry
-            value={senha}
-            onChangeText={setSenha}
-            placeholder="••••••••"
-            placeholderTextColor={colors.textMuted}
-          />
+          <View style={styles.senhaRow}>
+            <TextInput
+              style={styles.senhaInput}
+              secureTextEntry={!mostrarSenha}
+              value={senha}
+              onChangeText={setSenha}
+              placeholder="••••••••"
+              placeholderTextColor={colors.textMuted}
+            />
+            <Pressable
+              onPress={() => setMostrarSenha((v) => !v)}
+              hitSlop={8}
+              style={styles.olho}
+              accessibilityRole="button"
+              accessibilityLabel={mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'}
+            >
+              <Ionicons
+                name={mostrarSenha ? 'eye-off-outline' : 'eye-outline'}
+                size={20}
+                color={colors.textMuted}
+              />
+            </Pressable>
+          </View>
+
+          <Pressable
+            onPress={esqueciSenha}
+            style={styles.esqueci}
+            accessibilityRole="button"
+            accessibilityLabel="Esqueceu a senha"
+          >
+            <Text style={styles.esqueciTxt}>Esqueceu a senha?</Text>
+          </Pressable>
 
           {erro && <Text style={styles.erro}>{erro}</Text>}
 
@@ -193,6 +234,23 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.text,
   },
+  senhaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+  },
+  senhaInput: {
+    flex: 1,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    fontSize: 15,
+    color: colors.text,
+  },
+  olho: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  esqueci: { alignSelf: 'flex-end', paddingVertical: spacing.xs },
+  esqueciTxt: { ...typography.small, color: colors.primary, fontWeight: '600' },
   erro: { ...typography.small, color: colors.danger, marginTop: spacing.sm },
   btn: {
     backgroundColor: colors.primary,

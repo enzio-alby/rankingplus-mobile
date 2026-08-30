@@ -86,6 +86,16 @@ export function SplashScreen({ navigation }: Props) {
         </Pressable>
 
         <Pressable
+          style={styles.sobreBtn}
+          onPress={() => navigation.navigate('Sobre')}
+          accessibilityRole="button"
+          accessibilityLabel="Sobre a plataforma e o projeto"
+        >
+          <Ionicons name="information-circle-outline" size={16} color="rgba(255,255,255,0.9)" />
+          <Text style={styles.sobreText}>Sobre o projeto</Text>
+        </Pressable>
+
+        <Pressable
           style={styles.termosBtn}
           onPress={() => navigation.navigate('Termos', { origem: 'inicial' })}
         >
@@ -140,6 +150,12 @@ const styles = StyleSheet.create({
   erro: { ...typography.small, color: '#ffd0c8', textAlign: 'center' },
   linkBtn: { paddingVertical: spacing.md, alignItems: 'center' },
   linkBtnText: { ...typography.body, color: 'rgba(255,255,255,0.9)', fontWeight: '600' },
-  termosBtn: { paddingVertical: spacing.sm, alignItems: 'center' },
+  sobreBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    alignSelf: 'center', paddingVertical: spacing.sm, paddingHorizontal: spacing.lg,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)', borderRadius: radius.pill,
+  },
+  sobreText: { ...typography.small, color: 'rgba(255,255,255,0.9)', fontWeight: '600' },
+  termosBtn: { paddingVertical: spacing.sm, alignItems: 'center', marginTop: spacing.xs },
   termosText: { ...typography.small, color: 'rgba(255,255,255,0.55)' },
 });

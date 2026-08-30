@@ -39,6 +39,7 @@ export type RootStackParamList = {
   VagaForm: { vaga?: VagaEmpresa } | undefined;
   // sempre disponível
   Termos: { origem: 'inicial' | 'app' } | undefined;
+  Sobre: undefined;
 };
 
 /** @deprecated use RootStackParamList */
