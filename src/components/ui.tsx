@@ -19,10 +19,10 @@ export function ScreenScroll({
     <ScrollView
       style={{ backgroundColor: colors.bgMuted }}
       contentContainerStyle={{
-        padding: spacing.lg,
-        paddingTop: insets.top + spacing.md,
+        paddingHorizontal: spacing.md,
+        paddingTop: insets.top + spacing.sm,
         paddingBottom: spacing.xxl,
-        gap: spacing.md,
+        gap: spacing.sm,
       }}
       refreshControl={
         onRefresh ? (
@@ -104,15 +104,17 @@ export function StatTile({
 }
 
 const styles = StyleSheet.create({
-  titulo: { ...typography.h2, color: colors.text, marginBottom: spacing.xs },
+  titulo: { ...typography.h2, color: colors.text, marginTop: spacing.xs, marginBottom: 2 },
   card: {
     backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.lg,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
     elevation: 1,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
+    shadowColor: '#0b1220',
+    shadowOpacity: 0.04,
+    shadowRadius: 5,
     shadowOffset: { width: 0, height: 2 },
   },
   centro: { alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.xxl, gap: spacing.md },
@@ -129,13 +131,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.surface,
     borderRadius: radius.md,
-    paddingVertical: spacing.lg,
+    paddingVertical: spacing.md,
     alignItems: 'center',
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 1 },
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   statVal: { ...typography.h2, color: colors.primary },
   statLbl: { ...typography.tiny, color: colors.textMuted, marginTop: 2, textAlign: 'center' },

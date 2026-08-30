@@ -1,6 +1,5 @@
-import CryptoJS from 'crypto-js';
 import { getDb, aplicarSeed, seedAplicado, first, all, run } from '@/db/local';
-import { DEMO_TTL_HORAS, SEED_KEY } from '@/config';
+import { DEMO_TTL_HORAS } from '@/config';
 import type { Papel, Sessao } from '@/types/api';
 
 /**
@@ -48,7 +47,7 @@ async function semearChatDemo(modo: Papel) {
 
 async function _semearChatDemo(modo: Papel) {
   await limparChatLocal();
-  const cifrar = (t: string) => CryptoJS.AES.encrypt(t, SEED_KEY).toString();
+  const agora = new Date().toISOString();
   if (modo === 'aluno') {
     const p = await first<{ id: number; nome: string }>(
       'SELECT id, nome FROM professores ORDER BY id LIMIT 1',
@@ -56,11 +55,11 @@ async function _semearChatDemo(modo: Papel) {
     if (p) {
       const c = await run(
         "INSERT INTO chat_conversas (outro_tipo, outro_id, outro_nome, criado_em) VALUES ('professor', ?, ?, ?)",
-        [p.id, p.nome, new Date().toISOString()],
+        [p.id, p.nome, agora],
       );
       await run(
         "INSERT INTO chat_mensagens (conversa_id, remetente_tipo, remetente_id, texto_cifrado, criado_em) VALUES (?, 'professor', ?, ?, ?)",
-        [c.lastInsertRowId, p.id, cifrar('Olá! Qualquer dúvida sobre a disciplina, é só chamar aqui.'), new Date().toISOString()],
+        [c.lastInsertRowId, p.id, 'Olá! Qualquer dúvida sobre a disciplina, é só chamar aqui. 👋', agora],
       );
     }
   } else if (modo === 'empresa') {
@@ -70,11 +69,11 @@ async function _semearChatDemo(modo: Papel) {
     if (a) {
       const c = await run(
         "INSERT INTO chat_conversas (outro_tipo, outro_id, outro_nome, criado_em) VALUES ('aluno', ?, ?, ?)",
-        [a.id, a.nome, new Date().toISOString()],
+        [a.id, a.nome, agora],
       );
       await run(
         "INSERT INTO chat_mensagens (conversa_id, remetente_tipo, remetente_id, texto_cifrado, criado_em) VALUES (?, 'aluno', ?, ?, ?)",
-        [c.lastInsertRowId, a.id, cifrar('Tenho interesse na vaga! Quando podemos conversar?'), new Date().toISOString()],
+        [c.lastInsertRowId, a.id, 'Tenho interesse na vaga! Quando podemos conversar? 🙂', agora],
       );
     }
   }
@@ -130,15 +129,20 @@ export async function nomeDemoAtivo(): Promise<{ refId: number; nome: string } |
 }
 
 // ─── Chat LOCAL (modo demo) ────────────────────────────────────────────────
-const _dec = (c: string) => {
-  try {
-    return CryptoJS.AES.decrypt(c, SEED_KEY).toString(CryptoJS.enc.Utf8) || '';
-  } catch {
-    return '';
-  }
-};
+// Guardado em texto puro: é efêmero, fica só neste aparelho e some ao sair.
+// (A criptografia em repouso é uma feature do backend, no modo online.)
+async function garantirChatTabelas() {
+  const db = await getDb();
+  await db.execAsync(
+    'CREATE TABLE IF NOT EXISTS chat_conversas (id INTEGER PRIMARY KEY AUTOINCREMENT, outro_tipo TEXT, outro_id INTEGER, outro_nome TEXT, criado_em TEXT)',
+  );
+  await db.execAsync(
+    'CREATE TABLE IF NOT EXISTS chat_mensagens (id INTEGER PRIMARY KEY AUTOINCREMENT, conversa_id INTEGER, remetente_tipo TEXT, remetente_id INTEGER, texto_cifrado TEXT, criado_em TEXT)',
+  );
+}
 
 export async function conversasLocais() {
+  await garantirChatTabelas();
   const rows = await all<{
     id: number;
     outro_tipo: string;
@@ -157,7 +161,7 @@ export async function conversasLocais() {
         outro_tipo: c.outro_tipo,
         outro_id: c.outro_id,
         outro_nome: c.outro_nome,
-        previa: ult ? _dec(ult.texto_cifrado).slice(0, 80) : '',
+        previa: (ult?.texto_cifrado ?? '').slice(0, 80),
         ultima_em: ult?.criado_em ?? c.criado_em,
         nao_lidas: 0,
       };
@@ -166,6 +170,7 @@ export async function conversasLocais() {
 }
 
 export async function mensagensLocais(conversaId: number) {
+  await garantirChatTabelas();
   const rows = await all<{
     id: number;
     remetente_tipo: string;
@@ -177,7 +182,7 @@ export async function mensagensLocais(conversaId: number) {
     id: m.id,
     remetente_tipo: m.remetente_tipo,
     remetente_id: m.remetente_id,
-    texto: _dec(m.texto_cifrado),
+    texto: m.texto_cifrado ?? '',
     lida: true,
     criado_em: m.criado_em,
   }));
@@ -189,8 +194,9 @@ export async function enviarMensagemLocal(
   meuId: number,
   texto: string,
 ) {
+  await garantirChatTabelas();
   await run(
     'INSERT INTO chat_mensagens (conversa_id, remetente_tipo, remetente_id, texto_cifrado, criado_em) VALUES (?, ?, ?, ?, ?)',
-    [conversaId, meuTipo, meuId, CryptoJS.AES.encrypt(texto, SEED_KEY).toString(), new Date().toISOString()],
+    [conversaId, meuTipo, meuId, texto, new Date().toISOString()],
   );
 }

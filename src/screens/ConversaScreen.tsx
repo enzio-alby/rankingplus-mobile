@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TextInput, Pressable, FlatList,
-  KeyboardAvoidingView, Platform, ActivityIndicator,
+  KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
 } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -18,6 +18,8 @@ const CHIPS = [
   'Obrigado pelo retorno!',
   'Fico no aguardo.',
 ];
+
+const EMOJIS = ['👍', '🙂', '🙏', '🎯', '✅', '🚀', '📅', '❓'];
 
 export function ConversaScreen({ route }: Props) {
   const { sessao } = useSession();
@@ -39,6 +41,8 @@ export function ConversaScreen({ route }: Props) {
       qc.invalidateQueries({ queryKey: ['mensagens', conversaId] });
       qc.invalidateQueries({ queryKey: ['conversas'] });
     },
+    onError: (e) =>
+      Alert.alert('Erro', e instanceof Error ? e.message : 'Não foi possível enviar.'),
   });
 
   useEffect(() => {
@@ -77,6 +81,14 @@ export function ConversaScreen({ route }: Props) {
           }}
         />
       )}
+
+      <View style={styles.emojiRow}>
+        {EMOJIS.map((e) => (
+          <Pressable key={e} onPress={() => setTexto((t) => t + e)} hitSlop={6}>
+            <Text style={styles.emoji}>{e}</Text>
+          </Pressable>
+        ))}
+      </View>
 
       <View style={styles.chips}>
         {CHIPS.map((c) => (
@@ -118,6 +130,11 @@ const styles = StyleSheet.create({
   txtEu: { color: '#fff' },
   hora: { ...typography.tiny, color: colors.textMuted, marginTop: 3, alignSelf: 'flex-end' },
   horaEu: { color: 'rgba(255,255,255,0.7)' },
+  emojiRow: {
+    flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center',
+    paddingHorizontal: spacing.md, paddingTop: spacing.xs,
+  },
+  emoji: { fontSize: 22 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: spacing.md, paddingBottom: spacing.xs },
   chip: {
     borderWidth: 1, borderColor: colors.border, borderRadius: radius.pill,

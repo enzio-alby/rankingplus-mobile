@@ -9,15 +9,17 @@ export const colors = {
   primary: '#020122',
   accent: '#F4442E',
 
-  // Superfícies
+  // Superfícies — fundo com um cinza-azulado suave (menos "branco lavado"),
+  // cards brancos que se destacam contra ele (padrão de app moderno).
   bg: '#FFFFFF',
-  bgMuted: '#F8FAFC',
+  bgMuted: '#EDEFF4',
   surface: '#FFFFFF',
-  border: '#E5E7EB',
+  surfaceAlt: '#F7F8FB',
+  border: '#DEE1E9',
 
   // Texto
-  text: '#1F2937',
-  textMuted: '#6B7280',
+  text: '#111827',
+  textMuted: '#697386',
   textOnPrimary: '#FFFFFF',
 
   // Status (mesmos tons usados no drawer do Portal de Talentos)
