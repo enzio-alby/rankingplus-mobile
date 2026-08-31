@@ -14,5 +14,6 @@ export function useGoogleLoginStub(_onOk: (p: PerfilGoogle) => void) {
     entrar: async () => {
       void GOOGLE;
     },
+    deslogar: async () => {},
   };
 }

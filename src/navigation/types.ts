@@ -41,6 +41,7 @@ export type RootStackParamList = {
   // sempre disponível
   Termos: { origem: 'inicial' | 'app' } | undefined;
   Sobre: undefined;
+  Reportar: undefined;
 };
 
 /** @deprecated use RootStackParamList */

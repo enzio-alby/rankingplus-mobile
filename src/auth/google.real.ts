@@ -40,6 +40,13 @@ export function useGoogleLoginReal(onOk: (p: PerfilGoogle) => void) {
     disponivel: !!GOOGLE.webClientId,
     carregando,
     erro,
+    deslogar: async () => {
+      try {
+        await GoogleSignin.signOut();
+      } catch {
+        /* nada — só limpa o cache pra próxima escolha de conta */
+      }
+    },
     entrar: async () => {
       setErro(null);
       setCarregando(true);

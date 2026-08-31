@@ -230,6 +230,10 @@ export function EmpPerfilScreen() {
         <Text style={styles.hint}>Funil dos candidatos que você favoritou.</Text>
         <Funil favoritos={favs.data ?? []} carregando={favs.isLoading} />
 
+        <Pressable style={styles.linkRow} onPress={() => nav.navigate('Reportar')}>
+          <Ionicons name="bug-outline" size={18} color={colors.textMuted} />
+          <Text style={styles.linkTxt}>Reportar um problema</Text>
+        </Pressable>
         <Pressable style={styles.linkRow} onPress={() => nav.navigate('Termos', { origem: 'app' })}>
           <Ionicons name="document-text-outline" size={18} color={colors.textMuted} />
           <Text style={styles.linkTxt}>Termos e privacidade</Text>

@@ -9,6 +9,7 @@ import { LoginEmailScreen } from '@/screens/LoginEmailScreen';
 import { OtpScreen } from '@/screens/OtpScreen';
 import { TermsScreen } from '@/screens/TermsScreen';
 import { SobreScreen } from '@/screens/SobreScreen';
+import { ReportarScreen } from '@/screens/ReportarScreen';
 import { EditarLancamentoScreen } from '@/screens/professor/EditarLancamentoScreen';
 import { ConversaScreen } from '@/screens/ConversaScreen';
 import { NovaConversaScreen } from '@/screens/NovaConversaScreen';
@@ -133,6 +134,11 @@ export function RootNavigator() {
           name="Sobre"
           component={SobreScreen}
           options={{ headerShown: true, title: 'Sobre' }}
+        />
+        <Stack.Screen
+          name="Reportar"
+          component={ReportarScreen}
+          options={{ headerShown: true, title: 'Reportar um problema' }}
         />
       </Stack.Navigator>
     </NavigationContainer>

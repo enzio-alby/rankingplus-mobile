@@ -35,6 +35,11 @@ export function SplashScreen({ navigation }: Props) {
     else irParaDemo({ nome: 'Usuario', email: '' });
   }
 
+  async function trocarContaGoogle() {
+    await google.deslogar();
+    void google.entrar();
+  }
+
   return (
     <LinearGradient
       colors={['#05051f', colors.primary, '#241f52']}
@@ -78,6 +83,17 @@ export function SplashScreen({ navigation }: Props) {
           )}
         </Pressable>
         <Text style={styles.hint}>Explore como aluno, professor ou empresa. Dados temporários.</Text>
+
+        {google.disponivel && !google.carregando && (
+          <Pressable
+            onPress={trocarContaGoogle}
+            style={styles.trocarBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Entrar com outra conta Google"
+          >
+            <Text style={styles.trocarTxt}>Usar outra conta Google</Text>
+          </Pressable>
+        )}
 
         {google.erro && <Text style={styles.erro}>{google.erro}</Text>}
 
@@ -147,6 +163,8 @@ const styles = StyleSheet.create({
   },
   googleBtnText: { ...typography.body, color: colors.primary, fontWeight: '700' },
   hint: { ...typography.tiny, color: 'rgba(255,255,255,0.6)', textAlign: 'center', marginTop: -4 },
+  trocarBtn: { alignSelf: 'center', paddingVertical: spacing.xs },
+  trocarTxt: { ...typography.tiny, color: 'rgba(255,255,255,0.72)', textDecorationLine: 'underline' },
   erro: { ...typography.small, color: '#ffd0c8', textAlign: 'center' },
   linkBtn: { paddingVertical: spacing.md, alignItems: 'center' },
   linkBtnText: { ...typography.body, color: 'rgba(255,255,255,0.9)', fontWeight: '600' },
