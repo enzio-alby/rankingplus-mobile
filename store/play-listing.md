@@ -85,7 +85,7 @@ sendo apagados ao sair do app. É um trabalho acadêmico, sem fins comerciais.
 
 ## Política de privacidade
 
-- **URL:** _(a definir — hospedar o conteúdo de `store/PRIVACY.md`)_
+- **URL:** _((https://gist.github.com/enzio-alby/8d28e5472830c4dbf2a0764957733a24)— hospedar o conteúdo de `store/PRIVACY.md`)_
 
 ## Release de teste interno
 
