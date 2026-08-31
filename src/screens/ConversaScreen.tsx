@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as DocumentPicker from 'expo-document-picker';
+import { useHeaderHeight } from '@react-navigation/elements';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/navigation/types';
@@ -54,6 +55,7 @@ function TextoComLinks({ texto, eu }: { texto: string; eu: boolean }) {
 export function ConversaScreen({ route }: Props) {
   const { sessao } = useSession();
   const qc = useQueryClient();
+  const headerHeight = useHeaderHeight();
   const ehDemo = !!sessao?.demo;
   const { conversaId, outroTipo, outroId } = route.params;
   const [texto, setTexto] = useState('');
@@ -158,8 +160,8 @@ export function ConversaScreen({ route }: Props) {
   return (
     <KeyboardAvoidingView
       style={styles.fill}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={90}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={headerHeight}
     >
       {empChat && vagas.data && vagas.data.length > 0 && (
         <View style={styles.vagaBanner}>
