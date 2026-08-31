@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TextInput, Pressable, ActivityIndicator, Alert, Platform,
+  KeyboardAvoidingView,
 } from 'react-native';
 import Constants from 'expo-constants';
 import { useMutation } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
+import { useHeaderHeight } from '@react-navigation/elements';
 import { useSession } from '@/auth/session';
 import { enviarReporte } from '@/api/suporte';
 import { ScreenScroll, Titulo, Card } from '@/components/ui';
@@ -15,6 +17,7 @@ const EMAIL_RX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export function ReportarScreen() {
   const { sessao } = useSession();
   const nav = useNavigation<any>();
+  const headerHeight = useHeaderHeight();
 
   const [email, setEmail] = useState('');
   const [descricao, setDescricao] = useState('');
@@ -54,6 +57,11 @@ export function ReportarScreen() {
   }
 
   return (
+    <KeyboardAvoidingView
+      style={styles.fill}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={headerHeight}
+    >
     <ScreenScroll>
       <Titulo>Reportar um problema</Titulo>
       <Text style={styles.intro}>
@@ -97,10 +105,12 @@ export function ReportarScreen() {
         </Pressable>
       </Card>
     </ScreenScroll>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
+  fill: { flex: 1 },
   intro: { ...typography.small, color: colors.textMuted, marginBottom: spacing.sm },
   label: { ...typography.small, color: colors.textMuted, marginTop: spacing.sm, marginBottom: 4 },
   input: {

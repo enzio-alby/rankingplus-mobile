@@ -89,9 +89,9 @@ export function SplashScreen({ navigation }: Props) {
             onPress={trocarContaGoogle}
             style={styles.trocarBtn}
             accessibilityRole="button"
-            accessibilityLabel="Entrar com outra conta Google"
+            accessibilityLabel="Trocar a conta Google da demonstração"
           >
-            <Text style={styles.trocarTxt}>Usar outra conta Google</Text>
+            <Text style={styles.trocarTxt}>Trocar conta Google da demonstração</Text>
           </Pressable>
         )}
 
@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
   },
   googleBtnText: { ...typography.body, color: colors.primary, fontWeight: '700' },
   hint: { ...typography.tiny, color: 'rgba(255,255,255,0.6)', textAlign: 'center', marginTop: -4 },
-  trocarBtn: { alignSelf: 'center', paddingVertical: spacing.xs },
+  trocarBtn: { alignSelf: 'center', paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
   trocarTxt: { ...typography.tiny, color: 'rgba(255,255,255,0.72)', textDecorationLine: 'underline' },
   erro: { ...typography.small, color: '#ffd0c8', textAlign: 'center' },
   linkBtn: { paddingVertical: spacing.md, alignItems: 'center' },
