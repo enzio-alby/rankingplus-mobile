@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TextInput, Pressable, FlatList, Modal, Linking,
+  View, Text, StyleSheet, TextInput, Pressable, FlatList, Modal, Linking, Image,
   KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -11,10 +11,11 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/navigation/types';
 import { useSession } from '@/auth/session';
 import {
-  getMensagens, enviarMensagem, enviarAnexoChat, ANEXO_MAX_BYTES, type Mensagem,
+  getMensagens, enviarMensagem, enviarAnexoChat, ehImagem, ANEXO_MAX_BYTES, type Mensagem,
 } from '@/api/chat';
+import { getToken } from '@/api/client';
 import { getVagasDeInteresse } from '@/api/empresa';
-import { baixarEAbrirAnexo, tamanhoLegivel } from '@/lib/anexos';
+import { baixarEAbrirAnexo, urlAnexo, tamanhoLegivel } from '@/lib/anexos';
 import { Estado } from '@/components/ui';
 import { colors, spacing, radius, typography } from '@/theme/tokens';
 
@@ -107,26 +108,25 @@ export function ConversaScreen({ route }: Props) {
       return;
     }
     Alert.alert('Anexar', 'O que você quer enviar?', [
-      { text: 'Arquivo PDF (até 5 MB)', onPress: anexarPdf },
+      { text: 'Foto / imagem', onPress: () => anexarArquivo('image/*') },
+      { text: 'Arquivo PDF', onPress: () => anexarArquivo('application/pdf') },
       { text: 'Link', onPress: () => { setLinkUrl(''); setLinkModal(true); } },
       { text: 'Cancelar', style: 'cancel' },
     ]);
   }
 
-  async function anexarPdf() {
+  async function anexarArquivo(filtro: 'application/pdf' | 'image/*') {
     try {
-      const res = await DocumentPicker.getDocumentAsync({
-        type: 'application/pdf',
-        copyToCacheDirectory: true,
-      });
+      const res = await DocumentPicker.getDocumentAsync({ type: filtro, copyToCacheDirectory: true });
       if (res.canceled || !res.assets?.[0]) return;
       const a = res.assets[0];
       if ((a.size ?? 0) > ANEXO_MAX_BYTES) {
         Alert.alert('Arquivo grande demais', 'O limite para anexo é 5 MB.');
         return;
       }
+      const mime = a.mimeType || (filtro === 'application/pdf' ? 'application/pdf' : 'image/jpeg');
       setAnexando(true);
-      const up = await enviarAnexoChat(a.uri, a.name);
+      const up = await enviarAnexoChat(a.uri, a.name, mime);
       await enviarMensagem(conversaId, sessao!.tipo, sessao!.id, texto.trim(), up.anexo_id);
       setTexto('');
       qc.invalidateQueries({ queryKey: ['mensagens', conversaId] });
@@ -183,33 +183,49 @@ export function ConversaScreen({ route }: Props) {
           ListEmptyComponent={<Text style={styles.vazio}>Sem mensagens ainda. Diga oi 👋</Text>}
           renderItem={({ item }) => {
             const eu = souEu(item);
+            const anexo = item.anexo;
+            const imagem = anexo && !anexo.expirado && ehImagem(anexo.nome);
             return (
               <View style={[styles.bolha, eu ? styles.bolhaEu : styles.bolhaOutro]}>
-                {item.anexo && (
+                {anexo && imagem && (
+                  <Pressable
+                    onPress={() => abrirAnexo(item)}
+                    accessibilityRole="imagebutton"
+                    accessibilityLabel={`Abrir imagem ${anexo.nome}`}
+                  >
+                    <Image
+                      source={{
+                        uri: urlAnexo(anexo.id),
+                        headers: { Authorization: `Bearer ${getToken() ?? ''}` },
+                      }}
+                      style={styles.anexoImg}
+                      resizeMode="cover"
+                    />
+                  </Pressable>
+                )}
+                {anexo && !imagem && (
                   <Pressable
                     style={[styles.anexo, eu && styles.anexoEu]}
                     onPress={() => abrirAnexo(item)}
-                    disabled={item.anexo.expirado}
+                    disabled={anexo.expirado}
                     accessibilityRole="button"
                     accessibilityLabel={
-                      item.anexo.expirado
-                        ? `Anexo ${item.anexo.nome} expirado`
-                        : `Abrir anexo ${item.anexo.nome}`
+                      anexo.expirado ? `Anexo ${anexo.nome} expirado` : `Abrir anexo ${anexo.nome}`
                     }
                   >
                     <Ionicons
-                      name="document-text"
+                      name={ehImagem(anexo.nome) ? 'image' : 'document-text'}
                       size={20}
                       color={eu ? '#fff' : colors.primary}
                     />
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.anexoNome, eu && styles.txtEu]} numberOfLines={1}>
-                        {item.anexo.nome}
+                        {anexo.nome}
                       </Text>
                       <Text style={[styles.anexoMeta, eu && styles.horaEu]}>
-                        {item.anexo.expirado
+                        {anexo.expirado
                           ? 'expirado'
-                          : `PDF · ${tamanhoLegivel(item.anexo.tamanho_bytes)} · tocar p/ abrir`}
+                          : `${ehImagem(anexo.nome) ? 'Imagem' : 'PDF'} · ${tamanhoLegivel(anexo.tamanho_bytes)} · tocar p/ abrir`}
                       </Text>
                     </View>
                   </Pressable>
@@ -349,6 +365,10 @@ const styles = StyleSheet.create({
   anexoEu: { backgroundColor: 'rgba(255,255,255,0.14)' },
   anexoNome: { ...typography.small, color: colors.text, fontWeight: '600' },
   anexoMeta: { ...typography.tiny, color: colors.textMuted, marginTop: 1 },
+  anexoImg: {
+    width: 200, height: 200, borderRadius: radius.md, marginBottom: 4,
+    backgroundColor: colors.bgMuted,
+  },
   emojiRow: {
     flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center',
     paddingHorizontal: spacing.md, paddingTop: spacing.xs,

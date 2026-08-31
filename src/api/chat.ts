@@ -115,20 +115,28 @@ export function enviarMensagem(
   );
 }
 
+/** PDF ou imagem — casa com `_CHAT_ANEXO_ACEITOS` do backend. */
+export const ANEXO_MIMES_ACEITOS = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
+
+export function ehImagem(nome: string): boolean {
+  return /\.(jpe?g|png|webp)$/i.test(nome);
+}
+
 /**
- * Sobe um PDF pro backend (`POST /chat/anexos`, multipart campo `pdf`). Só faz
- * sentido logado de verdade — a demo não tem token que o backend aceite.
+ * Sobe um PDF ou imagem pro backend (`POST /chat/anexos`, multipart campo `pdf`).
+ * Só faz sentido logado de verdade — a demo não tem token que o backend aceite.
  * Retorna o `anexo_id` pra anexar na mensagem seguinte.
  */
 export async function enviarAnexoChat(
   fileUri: string,
   fileName: string,
+  mimeType: string,
 ): Promise<{ anexo_id: number; nome: string; tamanho_bytes: number }> {
   const form = new FormData();
   form.append('pdf', {
     uri: fileUri,
-    name: fileName || 'anexo.pdf',
-    type: 'application/pdf',
+    name: fileName || 'anexo',
+    type: mimeType || 'application/octet-stream',
   } as unknown as Blob);
   return apiUpload('/chat/anexos', form);
 }
