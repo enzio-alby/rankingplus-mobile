@@ -59,7 +59,9 @@ export function ReportarScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.fill}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      // Android já reposiciona sozinho com windowSoftInputMode=adjustResize;
+      // usar behavior aqui empilharia dois ajustes e o layout pularia. iOS precisa.
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={headerHeight}
     >
     <ScreenScroll>
