@@ -48,3 +48,4 @@ assets/seed.enc.json
 # src/db/seed-data.ts (blob AES do banco) É versionado de propósito: assim o
 # time clona e o app já roda offline. Regerar com `node scripts/export-seed.js`
 # quando o banco mudar.
+.ide/
