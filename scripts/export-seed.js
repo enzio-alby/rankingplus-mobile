@@ -43,6 +43,10 @@ const TABELAS = [
   'contratacoes_checkins', 'notificacoes',
 ];
 
+// Dados pessoais que NAO vao para o app (o seed e empacotado no APK/AAB).
+// A coluna `senha` (hash bcrypt) fica: e ela que permite o login local offline.
+const COLUNAS_PII = /^(cpf|telefone|data_nascimento|endereco_.*|contato_emergencia_.*|avatar_base64)$/;
+
 function lerEnv(arquivo) {
   const txt = fs.readFileSync(arquivo, 'utf8');
   const env = {};
@@ -67,6 +71,7 @@ async function main() {
   for (const t of TABELAS) {
     try {
       const [rows] = await conn.query(`SELECT * FROM \`${t}\``);
+      for (const r of rows) for (const k of Object.keys(r)) if (COLUNAS_PII.test(k)) r[k] = null;
       dump.tabelas[t] = rows;
       console.log(`  ${t.padEnd(32)} ${rows.length} linhas`);
     } catch (e) {

@@ -1,6 +1,7 @@
 import { apiFetch, ApiError } from '@/api/client';
 import { modoLocal } from '@/api/mode';
 import * as local from '@/api_mobile';
+import { abrirConversaLocal } from '@/db/bootstrap';
 
 async function comFallback<T>(viaApi: () => Promise<T>, viaLocal: () => Promise<T>): Promise<T> {
   if (modoLocal()) return viaLocal();
@@ -241,5 +242,52 @@ export function mudarStatusFavorito(empresaId: number, alunoId: number, status: 
       });
     },
     () => local.setStatusFavorito(empresaId, alunoId, status),
+  );
+}
+
+// ─── Interessados da vaga + "Conversar" ────────────────────────────────────
+export function getInteressadosVaga(empresaId: number, vagaId: number) {
+  return comFallback<local.Interessado[]>(
+    async () => {
+      const r = await apiFetch<local.Interessado[]>(`/empresas/${empresaId}/vagas/${vagaId}/interessados`);
+      return Array.isArray(r) ? r : [];
+    },
+    () => local.interessadosDaVaga(empresaId, vagaId),
+  );
+}
+
+/** Abre o chat com um aluno interessado. No servidor o aluno vira "contatado" nos favoritos. */
+export function abrirChatInteressado(empresaId: number, vagaId: number, alunoId: number, nome: string) {
+  return comFallback<{ conversa_id: number }>(
+    () =>
+      apiFetch(`/empresas/${empresaId}/vagas/${vagaId}/interessados/${alunoId}/abrir-chat`, {
+        method: 'POST',
+      }),
+    () => abrirConversaLocal('aluno', alunoId, nome),
+  );
+}
+
+// ─── Notas privadas e entrevista (favoritos) ───────────────────────────────
+export function salvarNotasFavorito(empresaId: number, alunoId: number, notas: string) {
+  return comFallback<{ notas: string }>(
+    () => apiFetch(`/empresas/${empresaId}/favoritos/${alunoId}/notas`, { method: 'PUT', body: { notas } }),
+    () => local.salvarNotasFavoritoLocal(empresaId, alunoId, notas),
+  );
+}
+
+/** `dataHora` no formato do servidor "YYYY-MM-DD HH:MM:SS"; null/vazio desmarca. */
+export function salvarEntrevistaFavorito(
+  empresaId: number,
+  alunoId: number,
+  dataHora: string | null,
+  observacao: string | null,
+) {
+  return comFallback<{ data_hora: string | null; observacao: string | null }>(
+    () =>
+      apiFetch(`/empresas/${empresaId}/favoritos/${alunoId}/entrevista`, {
+        method: 'PUT',
+        body: { data_hora: dataHora, observacao },
+      }),
+    () => local.salvarEntrevistaFavoritoLocal(empresaId, alunoId, dataHora, observacao),
   );
 }

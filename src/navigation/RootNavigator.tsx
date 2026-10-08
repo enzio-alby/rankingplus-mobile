@@ -21,6 +21,7 @@ import { PerfilComportamentalScreen } from '@/screens/aluno/PerfilComportamental
 import { RelatorioPreviewScreen } from '@/screens/RelatorioPreviewScreen';
 import { TalentosScreen } from '@/screens/empresa/TalentosScreen';
 import { VagaFormScreen } from '@/screens/empresa/VagaFormScreen';
+import { AvisoServidor } from '@/components/AvisoServidor';
 import { RoleTabs } from '@/navigation/RoleTabs';
 
 const TalentosReadonly = () => <TalentosScreen readonly />;
@@ -47,6 +48,8 @@ export function RootNavigator() {
   }
 
   return (
+    <View style={styles.raiz}>
+    <AvisoServidor />
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {sessao ? (
@@ -142,9 +145,11 @@ export function RootNavigator() {
         />
       </Stack.Navigator>
     </NavigationContainer>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  raiz: { flex: 1 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
 });

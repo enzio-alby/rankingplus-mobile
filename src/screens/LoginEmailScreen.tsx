@@ -10,8 +10,12 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/navigation/types';
 import type { Papel } from '@/types/api';
 import { useSession } from '@/auth/session';
-import { login, loginEmpresa } from '@/api/auth';
+import { login, loginEmpresa, solicitarRecuperacaoSenha } from '@/api/auth';
 import { ApiError } from '@/api/client';
+import { setModoLocal } from '@/api/mode';
+import { marcarServidorForaDoAr } from '@/api/status';
+import { loginLocal } from '@/db/auth-local';
+import { SUPORTE_EMAIL } from '@/lib/suporte';
 import { colors, spacing, radius, typography } from '@/theme/tokens';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LoginEmail'>;
@@ -34,19 +38,37 @@ export function LoginEmailScreen({ navigation }: Props) {
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
-  function esqueciSenha() {
+  async function esqueciSenha() {
     const alvo = identificador.trim();
     if (!alvo) {
       Alert.alert(
         'Esqueceu a senha?',
-        'Informe seu e-mail (ou matrícula) no campo acima e toque de novo em “Esqueceu a senha?”.',
+        'Informe seu e-mail no campo acima e toque de novo em “Esqueceu a senha?”.',
       );
       return;
     }
-    Alert.alert(
-      'Redefinição de senha',
-      `Se houver uma conta para "${alvo}", enviaremos as instruções de redefinição para o e-mail cadastrado.\n\n(No app este passo é simulado — a redefinição é concluída pelo site do Ranking+.)`,
-    );
+    // O backend só aceita e-mail (não matrícula).
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(alvo)) {
+      Alert.alert(
+        'Informe seu e-mail',
+        'A recuperação de senha funciona apenas com o e-mail cadastrado, não com a matrícula. Digite seu e-mail no campo acima.',
+      );
+      return;
+    }
+    setEnviando(true);
+    try {
+      const msg = await solicitarRecuperacaoSenha(alvo);
+      Alert.alert(
+        'Verifique seu e-mail',
+        `${msg}
+
+O link de redefinição chega por e-mail e a nova senha é definida no site do Ranking+.`,
+      );
+    } catch (e) {
+      Alert.alert('Não foi possível enviar', e instanceof Error ? e.message : `Tente novamente em instantes. Suporte: ${SUPORTE_EMAIL}`);
+    } finally {
+      setEnviando(false);
+    }
   }
 
   async function entrarAcao() {
@@ -74,12 +96,25 @@ export function LoginEmailScreen({ navigation }: Props) {
         tipo: papel,
       });
     } catch (e) {
+      if (e instanceof ApiError && e.status === 0) {
+        // Servidor fora do ar: tenta a conta real no banco local (sem OTP, não há como verificá-lo offline)
+        try {
+          const sessaoLocal = await loginLocal(papel, identificador.trim(), senha);
+          setModoLocal(true);
+          marcarServidorForaDoAr();
+          await entrar(sessaoLocal);
+          return;
+        } catch {
+          setErro(
+            `Servidor de produção fora do ar e esta conta não foi encontrada (ou a senha está incorreta) no banco local. Suporte: ${SUPORTE_EMAIL}`,
+          );
+          return;
+        }
+      }
       setErro(
         e instanceof ApiError
-          ? e.status === 0
-            ? 'Sem conexão com o servidor. Confira o Wi-Fi / se o backend está no ar.'
-            : e.message
-          : 'Não foi possível entrar.',
+          ? e.message
+          : `Não foi possível entrar. Suporte: ${SUPORTE_EMAIL}`,
       );
     } finally {
       setEnviando(false);
@@ -182,7 +217,7 @@ export function LoginEmailScreen({ navigation }: Props) {
 
           {papel !== 'empresa' && (
             <Text style={styles.nota}>
-              Aluno e professor recebem um código de 6 dígitos por e-mail (2FA).
+              Aluno e professor recebem um código de 6 dígitos por e-mail (2FA). Com o servidor fora do ar, o acesso é local (sem código), usando os dados do aparelho.
             </Text>
           )}
         </View>

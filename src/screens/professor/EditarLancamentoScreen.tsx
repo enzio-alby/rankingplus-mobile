@@ -20,12 +20,14 @@ export function EditarLancamentoScreen({ route, navigation }: Props) {
   const [nota, setNota] = useState(atual.nota_avaliacao != null ? String(atual.nota_avaliacao) : '');
   const [ativ, setAtiv] = useState(String(atual.atividades_entregues ?? ''));
 
+  const [erroNota, setErroNota] = useState<string | null>(null);
+
   const m = useMutation({
-    mutationFn: () =>
+    mutationFn: (notaValidada: number | null) =>
       salvarLancamento(profId, discId, alunoId, {
         mencao: mencao ?? undefined,
         faltas: faltas === '' ? undefined : Number(faltas),
-        nota_avaliacao: nota === '' ? null : Number(nota),
+        nota_avaliacao: notaValidada,
         atividades_entregues: ativ === '' ? undefined : Number(ativ),
       }),
     onSuccess: () => {
@@ -36,6 +38,23 @@ export function EditarLancamentoScreen({ route, navigation }: Props) {
     },
     onError: (e) => Alert.alert('Erro', e instanceof Error ? e.message : 'Não foi possível salvar.'),
   });
+
+  // Valida a nota (0 a 10, aceita vírgula) antes de enviar; vale para modo online e demo.
+  function salvar() {
+    const txt = nota.trim().replace(',', '.');
+    let valor: number | null = null;
+    if (txt !== '') {
+      valor = Number(txt);
+      if (!Number.isFinite(valor) || valor < 0 || valor > 10) {
+        const msg = 'A nota deve ser um número entre 0 e 10.';
+        setErroNota(msg);
+        Alert.alert('Nota inválida', msg);
+        return;
+      }
+    }
+    setErroNota(null);
+    m.mutate(valor);
+  }
 
   return (
     <ScreenScroll>
@@ -57,11 +76,12 @@ export function EditarLancamentoScreen({ route, navigation }: Props) {
         </View>
 
         <Campo label="Faltas" value={faltas} onChange={setFaltas} />
-        <Campo label="Nota da avaliação (0–10)" value={nota} onChange={setNota} />
+        <Campo label="Nota da avaliação (0–10)" value={nota} onChange={(v) => { setNota(v); setErroNota(null); }} />
+        {erroNota && <Text style={styles.erro}>{erroNota}</Text>}
         <Campo label="Atividades entregues" value={ativ} onChange={setAtiv} />
       </Card>
 
-      <Pressable style={[styles.salvar, m.isPending && { opacity: 0.6 }]} disabled={m.isPending} onPress={() => m.mutate()}>
+      <Pressable style={[styles.salvar, m.isPending && { opacity: 0.6 }]} disabled={m.isPending} onPress={salvar}>
         {m.isPending ? <ActivityIndicator color="#fff" /> : <Text style={styles.salvarTxt}>Salvar lançamento</Text>}
       </Pressable>
       <Pressable style={styles.cancelar} onPress={() => navigation.goBack()}>
@@ -102,6 +122,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
     paddingHorizontal: spacing.md, paddingVertical: spacing.md, fontSize: 15, color: colors.text,
   },
+  erro: { ...typography.small, color: colors.danger, marginTop: 4 },
   salvar: {
     backgroundColor: colors.primary, borderRadius: radius.md,
     paddingVertical: spacing.lg, alignItems: 'center', marginTop: spacing.lg,

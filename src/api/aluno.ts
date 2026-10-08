@@ -47,7 +47,7 @@ export function toggleInteresse(alunoId: number, vagaId: number, ligar: boolean)
 
 // ─── Meu Perfil (ver + editar) ─────────────────────────────────────────────
 export function getMeuPerfil(alunoId: number) {
-  return comFallback<local.MeuPerfil | null>(
+  return comFallback<(local.MeuPerfil & { avatar_base64?: string | null }) | null>(
     async () => {
       const a = await apiFetch<Record<string, unknown>>(`/alunos/${alunoId}`);
       return {
@@ -60,9 +60,13 @@ export function getMeuPerfil(alunoId: number) {
         curso: (a.curso as string) ?? null,
         semestre_atual: (a.semestre_atual as number) ?? null,
         permitir_exibicao_ranking: Number(a.permitir_exibicao_ranking ?? 1),
+        avatar_base64: (a.avatar_base64 as string) ?? null,
       };
     },
-    () => local.meuPerfil(alunoId),
+    async () => {
+      const p = await local.meuPerfil(alunoId);
+      return p ? { ...p, avatar_base64: await local.lerAvatarLocal('aluno', alunoId) } : p;
+    },
   );
 }
 
@@ -73,6 +77,17 @@ export function salvarMeuPerfil(alunoId: number, campos: local.CamposPerfilAluno
     },
     () => local.atualizarPerfilAluno(alunoId, campos),
   );
+}
+
+/** Troca a senha do aluno (PUT /alunos/:id/senha). Disponível só com o servidor no ar. */
+export async function alterarSenhaAluno(alunoId: number, novaSenha: string): Promise<void> {
+  if (modoLocal()) throw new Error('Disponível somente com o servidor no ar.');
+  try {
+    await apiFetch(`/alunos/${alunoId}/senha`, { method: 'PUT', body: { nova_senha: novaSenha } });
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 0) throw new Error('Sem conexão com o servidor.');
+    throw e;
+  }
 }
 
 // ─── Perfil profissional / ATS (resumo, experiências, formações, idiomas…) ──

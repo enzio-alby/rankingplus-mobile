@@ -776,18 +776,118 @@ export type Favorito = {
   semestre: number | null;
   status: StatusFavorito;
   media_geral: number | null;
+  /** Notas são PRIVADAS da empresa (o aluno nunca vê). */
+  notas?: string | null;
+  entrevista_data_hora?: string | null;
+  entrevista_observacao?: string | null;
 };
 
-export function favoritos(empresaId: number) {
-  return all<Favorito>(
+export async function favoritos(empresaId: number): Promise<Favorito[]> {
+  const consulta = (extras: string) =>
     `SELECT ef.aluno_id AS id, a.nome, a.curso, a.semestre_atual AS semestre, ef.status,
-            (SELECT ROUND(AVG(${NOTA('mencao')}), 1) FROM boletim WHERE aluno_id = a.id) AS media_geral
+            (SELECT ROUND(AVG(${NOTA('mencao')}), 1) FROM boletim WHERE aluno_id = a.id) AS media_geral${extras}
        FROM empresa_favoritos ef
        JOIN alunos a ON a.id = ef.aluno_id
       WHERE ef.empresa_id = ?
-      ORDER BY a.nome`,
-    [empresaId],
+      ORDER BY a.nome`;
+  try {
+    return await all<Favorito>(
+      consulta(', ef.notas, ef.entrevista_data_hora, ef.entrevista_observacao'),
+      [empresaId],
+    );
+  } catch {
+    // seed antigo, sem as colunas de notas/entrevista: lista sem elas
+    return all<Favorito>(consulta(''), [empresaId]);
+  }
+}
+
+const LIMITE_TEXTO_FAVORITO = 2000;
+const MSG_SEM_COLUNAS_FAVORITO =
+  'O banco local ainda não tem as colunas de notas/entrevista. Atualize o app para a versão com o novo seed.';
+
+/** UPDATE em empresa_favoritos; erro claro se o favorito não existe ou se faltam colunas. */
+async function atualizarCamposFavorito(
+  empresaId: number,
+  alunoId: number,
+  sets: string,
+  valores: (string | null)[],
+): Promise<void> {
+  let r;
+  try {
+    r = await run(`UPDATE empresa_favoritos SET ${sets} WHERE empresa_id = ? AND aluno_id = ?`, [
+      ...valores,
+      empresaId,
+      alunoId,
+    ]);
+  } catch {
+    throw new Error(MSG_SEM_COLUNAS_FAVORITO);
+  }
+  if (!r.changes) throw new Error('Favorito não encontrado. Favorite o candidato antes.');
+}
+
+export async function salvarNotasFavoritoLocal(
+  empresaId: number,
+  alunoId: number,
+  notas: string,
+): Promise<{ notas: string }> {
+  const texto = String(notas ?? '');
+  if (texto.length > LIMITE_TEXTO_FAVORITO) {
+    throw new Error(`As notas podem ter no máximo ${LIMITE_TEXTO_FAVORITO} caracteres.`);
+  }
+  await atualizarCamposFavorito(empresaId, alunoId, 'notas = ?', [texto]);
+  return { notas: texto };
+}
+
+export async function salvarEntrevistaFavoritoLocal(
+  empresaId: number,
+  alunoId: number,
+  dataHora: string | null,
+  observacao: string | null,
+): Promise<{ data_hora: string | null; observacao: string | null }> {
+  const dh = dataHora && dataHora.trim() ? dataHora.trim() : null;
+  const obs = observacao && observacao.trim() ? observacao : null;
+  if (obs && obs.length > LIMITE_TEXTO_FAVORITO) {
+    throw new Error(`A observação pode ter no máximo ${LIMITE_TEXTO_FAVORITO} caracteres.`);
+  }
+  await atualizarCamposFavorito(
+    empresaId,
+    alunoId,
+    'entrevista_data_hora = ?, entrevista_observacao = ?',
+    [dh, obs],
   );
+  return { data_hora: dh, observacao: obs };
+}
+
+// ─── Foto de perfil (avatar_base64) ───────────────────────────────────────
+const TABELA_AVATAR = { aluno: 'alunos', professor: 'professores', empresa: 'empresas' } as const;
+
+/** Lê a foto local; null se não houver ou se o seed não tiver a coluna. */
+export async function lerAvatarLocal(
+  tipo: keyof typeof TABELA_AVATAR,
+  id: number,
+): Promise<string | null> {
+  try {
+    const r = await first<{ avatar_base64: string | null }>(
+      `SELECT avatar_base64 FROM ${TABELA_AVATAR[tipo]} WHERE id = ?`,
+      [id],
+    );
+    return r?.avatar_base64 ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Grava (data URI) ou remove (null) a foto local. */
+export async function salvarAvatarLocal(
+  tipo: keyof typeof TABELA_AVATAR,
+  id: number,
+  avatarBase64: string | null,
+): Promise<void> {
+  try {
+    await run(`UPDATE ${TABELA_AVATAR[tipo]} SET avatar_base64 = ? WHERE id = ?`, [avatarBase64, id]);
+  } catch {
+    throw new Error('O banco local ainda não tem a coluna de foto. Atualize o app para a versão com o novo seed.');
+  }
 }
 
 export async function statusFavorito(empresaId: number, alunoId: number): Promise<StatusFavorito | null> {
@@ -970,6 +1070,21 @@ export function vagasDeInteresse(empresaId: number, alunoId: number) {
       WHERE vi.aluno_id = ? AND v.empresa_id = ?
       ORDER BY v.criado_em DESC`,
     [alunoId, empresaId],
+  );
+}
+
+export type Interessado = { id: number; nome: string; curso: string | null; semestre: number | null };
+
+/** Alunos que demonstraram interesse numa vaga da empresa (modo demo). */
+export function interessadosDaVaga(empresaId: number, vagaId: number) {
+  return all<Interessado>(
+    `SELECT a.id, a.nome, a.curso, a.semestre_atual AS semestre
+       FROM vaga_interesses vi
+       JOIN alunos a ON a.id = vi.aluno_id
+       JOIN empresa_vagas v ON v.id = vi.vaga_id
+      WHERE vi.vaga_id = ? AND v.empresa_id = ?
+      ORDER BY a.nome`,
+    [vagaId, empresaId],
   );
 }
 
@@ -1507,4 +1622,25 @@ export async function avaliacaoComportamental(alunoId: number): Promise<Resposta
     pode_reavaliar_agora: podeReavaliar,
     proxima_liberacao: podeReavaliar ? null : a.valido_ate,
   };
+}
+
+// ─── PROFESSOR — VAGAS DISPONÍVEIS (modo demo) ─────────────────────────────
+export type VagaDisponivelProf = {
+  id: number;
+  titulo: string;
+  descricao: string | null;
+  curso_preferido: string | null;
+  semestre_minimo: number | null;
+  empresa_nome: string | null;
+};
+
+export async function vagasAbertasParaProfessor(): Promise<VagaDisponivelProf[]> {
+  return all<VagaDisponivelProf>(
+    `SELECT v.id, v.titulo, v.descricao, v.curso_preferido, v.semestre_minimo,
+            e.nome_fantasia AS empresa_nome
+       FROM empresa_vagas v
+       JOIN empresas e ON e.id = v.empresa_id
+      WHERE v.status = 'aberta'
+      ORDER BY v.criado_em DESC`,
+  );
 }

@@ -42,7 +42,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const entrar = useCallback(async (s: Sessao) => {
     await SecureStore.setItemAsync(STORAGE_KEY, JSON.stringify(s));
-    setModoLocal(!!s.demo);
+    setModoLocal(!!s.demo || s.token.startsWith('local-'));
     setAuth(s.token);
     setSessao(s);
   }, []);
@@ -62,7 +62,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         const raw = await SecureStore.getItemAsync(STORAGE_KEY);
         if (raw && vivo) {
           const s = JSON.parse(raw) as Sessao;
-          setModoLocal(!!s.demo);
+          setModoLocal(!!s.demo || s.token.startsWith('local-'));
           setAuth(s.token, () => void sair());
           setSessao(s);
         }

@@ -19,6 +19,8 @@ import {
 import { getAreasFoco } from '@/api/aluno';
 import { PERFIS_COMPORTAMENTAIS, STATUS_FAVORITO } from '@/api_mobile';
 import { Estado } from '@/components/ui';
+import { AvatarPerfil } from '@/components/AvatarPerfil';
+import { getAvatarEmpresa } from '@/api/avatar';
 import { SelectPill } from '@/components/filtro';
 import { colors, spacing, radius, typography } from '@/theme/tokens';
 
@@ -50,6 +52,7 @@ export function EmpPerfilScreen() {
   // Só precisam das listas de domínio ao editar (e normalmente já estão em cache).
   const areas = useQuery({ queryKey: ['areas-foco'], queryFn: getAreasFoco, enabled: editando });
   const tipos = useQuery({ queryKey: ['tipos-vaga'], queryFn: getTiposVaga, enabled: editando });
+  const avatarEmp = useQuery({ queryKey: ['emp-avatar', id], queryFn: () => getAvatarEmpresa(id) });
   const vagas = useQuery({ queryKey: ['vagas-emp', id], queryFn: () => getVagasEmpresa(id) });
   const favs = useQuery({ queryKey: ['favoritos', id], queryFn: () => getFavoritos(id) });
   const contr = useQuery({ queryKey: ['contratacoes', id], queryFn: () => getContratacoes(id) });
@@ -111,9 +114,7 @@ export function EmpPerfilScreen() {
         colors={[colors.primary, '#241f52']}
         style={[styles.header, { paddingTop: insets.top + spacing.lg }]}
       >
-        <View style={styles.avatar}>
-          <Text style={styles.avatarTxt}>{inicial}</Text>
-        </View>
+        <AvatarPerfil tipo="empresa" id={id} inicial={inicial} avatarAtual={avatarEmp.data} tamanho={64} />
         <Text style={styles.nomeHead}>{sessao?.nome}</Text>
         {sessao?.demo && <Text style={styles.demo}>modo demonstração</Text>}
         <View style={styles.statsRow}>

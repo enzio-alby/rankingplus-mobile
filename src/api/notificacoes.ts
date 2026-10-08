@@ -13,13 +13,14 @@ async function comFallback<T>(viaApi: () => Promise<T>, viaLocal: () => Promise<
   }
 }
 
-// O backend só tem rota de notificações para aluno e empresa. Professor: local
-// (no online, lista vazia — não é erro).
+// O backend tem rota de notificações para aluno, empresa e professor.
 function temRotaOnline(tipo: Papel) {
-  return tipo === 'aluno' || tipo === 'empresa';
+  return tipo === 'aluno' || tipo === 'empresa' || tipo === 'professor';
 }
 function base(tipo: Papel) {
-  return tipo === 'empresa' ? 'empresas' : 'alunos';
+  if (tipo === 'empresa') return 'empresas';
+  if (tipo === 'professor') return 'professores';
+  return 'alunos';
 }
 
 export function getNotificacoes(tipo: Papel, id: number) {

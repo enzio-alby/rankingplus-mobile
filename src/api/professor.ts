@@ -55,7 +55,7 @@ export function enviarAvisoTurma(discId: number, mensagem: string) {
 }
 
 export function getPerfilProfessor(id: number) {
-  return comFallback<local.PerfilProfessor | null>(
+  return comFallback<(local.PerfilProfessor & { avatar_base64?: string | null }) | null>(
     async () => {
       const p = await apiFetch<Record<string, unknown>>(`/professores/${id}`);
       return {
@@ -67,10 +67,25 @@ export function getPerfilProfessor(id: number) {
         area_atuacao: (p.area_atuacao as string) ?? null,
         turno: (p.turno as string) ?? null,
         campus: (p.campus as string) ?? null,
+        avatar_base64: (p.avatar_base64 as string) ?? null,
       };
     },
-    () => local.perfilProfessor(id),
+    async () => {
+      const p = await local.perfilProfessor(id);
+      return p ? { ...p, avatar_base64: await local.lerAvatarLocal('professor', id) } : p;
+    },
   );
+}
+
+/** Troca a senha do professor (PUT /professores/:id/senha). Disponível só com o servidor no ar. */
+export async function alterarSenhaProfessor(id: number, novaSenha: string): Promise<void> {
+  if (modoLocal()) throw new Error('Disponível somente com o servidor no ar.');
+  try {
+    await apiFetch(`/professores/${id}/senha`, { method: 'PUT', body: { nova_senha: novaSenha } });
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 0) throw new Error('Sem conexão com o servidor.');
+    throw e;
+  }
 }
 
 export function salvarPerfilProfessor(id: number, campos: local.CamposPerfilProfessor) {
@@ -107,4 +122,12 @@ export async function getAlunosDaDisciplina(profId: number, discId: number) {
   // O endpoint do web pode devolver o mesmo aluno 2x (2 semestres) — dedup por id.
   const vistos = new Set<number>();
   return rows.filter((a) => (vistos.has(a.id) ? false : (vistos.add(a.id), true)));
+}
+
+/** Vagas abertas para o professor recomendar a alunos. */
+export function getVagasDisponiveis(professorId: number) {
+  return comFallback<local.VagaDisponivelProf[]>(
+    () => apiFetch(`/professores/${professorId}/vagas-disponiveis`),
+    () => local.vagasAbertasParaProfessor(),
+  );
 }

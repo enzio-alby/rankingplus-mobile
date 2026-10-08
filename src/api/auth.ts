@@ -1,4 +1,5 @@
-import { apiFetch } from '@/api/client';
+import { apiFetch, ApiError } from '@/api/client';
+import { modoLocal } from '@/api/mode';
 import type { LoginResponse, Papel, VerificarOtpResponse } from '@/types/api';
 
 // ─── Login por e-mail + OTP (aluno / professor) ─────────────────────────────
@@ -37,4 +38,26 @@ export function loginEmpresa(email: string, senha: string) {
     publica: true,
     body: { email, senha },
   });
+}
+
+// ─── Recuperação de senha (só por e-mail; a redefinição termina no site) ────
+export async function solicitarRecuperacaoSenha(email: string): Promise<string> {
+  if (modoLocal()) throw new Error('Indisponível no modo demonstração.');
+  try {
+    const r = await apiFetch<{ sucesso: boolean; mensagem: string }>('/recuperar-senha/solicitar', {
+      method: 'POST',
+      publica: true,
+      body: { email },
+    });
+    return r.mensagem;
+  } catch (e) {
+    if (e instanceof ApiError) {
+      if (e.status === 0) throw new Error('Sem conexão com o servidor. Confira sua internet e tente de novo. Suporte: admin.rankingplus@gmail.com');
+      if (e.status === 429) {
+        throw new Error('Muitas tentativas. Aguarde cerca de 15 minutos e tente novamente.');
+      }
+      if (e.status === 400) throw new Error('E-mail inválido. Confira o endereço digitado.');
+    }
+    throw e;
+  }
 }

@@ -1,4 +1,5 @@
 import { API_URL } from '@/config';
+import { marcarServidorForaDoAr, marcarServidorNoAr } from '@/api/status';
 
 /**
  * Wrapper fino de fetch para a API do Ranking+.
@@ -67,8 +68,10 @@ export async function apiFetch<T = unknown>(
     });
   } catch (e) {
     // falha de rede (fora da LAN, servidor down) — quem chama decide o fallback
+    marcarServidorForaDoAr();
     throw new ApiError(0, null, 'Sem conexão com o servidor.');
   }
+  marcarServidorNoAr();
 
   const texto = await res.text();
   const data = texto ? safeJson(texto) : null;
@@ -109,8 +112,10 @@ export async function apiUpload<T = unknown>(path: string, form: FormData): Prom
   try {
     res = await fetch(`${API_URL}${path}`, { method: 'POST', headers, body: form });
   } catch {
+    marcarServidorForaDoAr();
     throw new ApiError(0, null, 'Sem conexão com o servidor.');
   }
+  marcarServidorNoAr();
 
   const texto = await res.text();
   const data = texto ? safeJson(texto) : null;

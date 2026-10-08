@@ -6,7 +6,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import { useSession } from '@/auth/session';
-import { getPerfilProfessor, salvarPerfilProfessor, getStatsProfessor } from '@/api/professor';
+import { getPerfilProfessor, salvarPerfilProfessor, getStatsProfessor, alterarSenhaProfessor } from '@/api/professor';
+import { AvatarPerfil } from '@/components/AvatarPerfil';
+import { AlterarSenha } from '@/components/AlterarSenha';
 import { Estado } from '@/components/ui';
 import { colors, spacing, radius, typography } from '@/theme/tokens';
 
@@ -58,9 +60,7 @@ export function ProfPerfilScreen() {
         colors={[colors.primary, '#241f52']}
         style={[styles.header, { paddingTop: insets.top + spacing.lg }]}
       >
-        <View style={styles.avatar}>
-          <Text style={styles.avatarTxt}>{inicial}</Text>
-        </View>
+        <AvatarPerfil tipo="professor" id={id} inicial={inicial} avatarAtual={q.data?.avatar_base64} />
         <Text style={styles.nomeHead}>{q.data?.nome ?? sessao?.nome}</Text>
         <Text style={styles.emailHead}>{q.data?.email ?? ''}</Text>
         {q.data?.titulacao ? <Text style={styles.tit}>{q.data.titulacao}</Text> : null}
@@ -109,6 +109,8 @@ export function ProfPerfilScreen() {
                 <Linha icon="location" label="Campus" valor={q.data.campus} />
               </View>
             )}
+
+            <AlterarSenha onSalvar={(s) => alterarSenhaProfessor(id, s)} />
 
             <Pressable style={styles.linkRow} onPress={() => nav.navigate('Reportar')}>
               <Ionicons name="bug-outline" size={18} color={colors.textMuted} />
